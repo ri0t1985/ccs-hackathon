@@ -45,6 +45,7 @@ public class BoardGameOverviewService : IBoardGameOverviewService
         var games = uniqueGames
             .Select(gr => new BoardGameOverviewItem
             {
+                BoardGameId = gr.BoardGameId,
                 GameName = gr.BoardGame.Name,
                 Summary = gr.BoardGameCache?.Summary,
                 Complexity = gr.BoardGameCache?.Complexity,

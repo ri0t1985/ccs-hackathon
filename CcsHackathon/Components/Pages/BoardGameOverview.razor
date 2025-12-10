@@ -4,6 +4,8 @@
 @attribute [Authorize]
 @inject IBoardGameOverviewService BoardGameOverviewService
 @inject ISessionService SessionService
+@inject IBoardGameFaqService BoardGameFaqService
+@inject IUserContext UserContext
 @inject ILogger<BoardGameOverview> Logger
 
 <PageTitle>Board Games Overview</PageTitle>
@@ -123,17 +125,31 @@
                                 }
                             </td>
                             <td>
-                                @if (!string.IsNullOrWhiteSpace(game.Summary))
-                                {
-                                    <button class="btn btn-sm btn-outline-primary" 
-                                            @onclick="() => ShowDescriptionModal(game)">
-                                        View Description
-                                    </button>
-                                }
-                                else
-                                {
-                                    <span class="text-muted small">No description</span>
-                                }
+                                <div class="btn-group" role="group">
+                                    @if (!string.IsNullOrWhiteSpace(game.Summary))
+                                    {
+                                        <button class="btn btn-sm btn-outline-primary" 
+                                                @onclick="() => ShowDescriptionModal(game)">
+                                            View Description
+                                        </button>
+                                    }
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-sm btn-outline-info dropdown-toggle" 
+                                                data-bs-toggle="dropdown" aria-expanded="false">
+                                            Ask Question
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            @foreach (var question in commonQuestions)
+                                            {
+                                                <li>
+                                                    <a class="dropdown-item" href="#" @onclick="() => AskQuestion(game, question)" @onclick:preventDefault="true">
+                                                        @question
+                                                    </a>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </div>
+                                </div>
                             </td>
                         </tr>
                     }
@@ -192,6 +208,68 @@
     <div class="modal-backdrop fade show"></div>
 }
 
+@* FAQ Conversation Modal *@
+@if (selectedGameForFaq != null)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">FAQ: @selectedGameForFaq.GameName</h5>
+                    <button type="button" class="btn-close" @onclick="CloseFaqModal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="max-height: 500px; overflow-y: auto;">
+                    @if (faqConversation == null)
+                    {
+                        <div class="text-center py-3">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="conversation-thread mb-3">
+                            @foreach (var message in faqConversation)
+                            {
+                                <div class="mb-3 @(message.Role == "user" ? "text-end" : "text-start")">
+                                    <div class="d-inline-block p-2 rounded @(message.Role == "user" ? "bg-primary text-white" : "bg-light")" style="max-width: 80%;">
+                                        <div class="fw-bold small mb-1">@(message.Role == "user" ? "You" : "AI Assistant")</div>
+                                        <div>@message.Content</div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        
+                        @if (isLoadingFaqResponse)
+                        {
+                            <div class="text-center py-2">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Thinking...</span>
+                                </div>
+                            </div>
+                        }
+                        
+                        <div class="input-group">
+                            <input type="text" class="form-control" @bind="followUpQuestion" @bind:event="oninput" 
+                                   placeholder="Ask a follow-up question..." 
+                                   disabled="@isLoadingFaqResponse"
+                                   @onkeypress="OnFollowUpKeyPress" />
+                            <button class="btn btn-primary" @onclick="AskFollowUp" disabled="@(isLoadingFaqResponse || string.IsNullOrWhiteSpace(followUpQuestion))">
+                                Send
+                            </button>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseFaqModal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
 @code {
     private IEnumerable<BoardGameOverviewItem>? games;
     private IEnumerable<BoardGameOverviewItem> sortedGames = Enumerable.Empty<BoardGameOverviewItem>();
@@ -201,6 +279,14 @@
     private Guid? selectedSessionId;
     private string selectedSessionIdString = string.Empty;
     private BoardGameOverviewItem? selectedGameForDescription;
+    
+    // FAQ state
+    private BoardGameOverviewItem? selectedGameForFaq;
+    private List<BoardGameConversationMessage>? faqConversation;
+    private Guid? currentConversationId;
+    private string followUpQuestion = string.Empty;
+    private bool isLoadingFaqResponse = false;
+    private List<string> commonQuestions = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -210,6 +296,9 @@
             // Don't load games until a session is selected
             games = Enumerable.Empty<BoardGameOverviewItem>();
             sortedGames = Enumerable.Empty<BoardGameOverviewItem>();
+            
+            // Load common questions
+            commonQuestions = BoardGameFaqService.GetCommonQuestions();
         }
         catch (Exception ex)
         {
@@ -344,6 +433,173 @@
             html += "<span class=\"text-muted\">☆</span>";
         }
         return html;
+    }
+
+    private async Task AskQuestion(BoardGameOverviewItem game, string question)
+    {
+        selectedGameForFaq = game;
+        followUpQuestion = string.Empty;
+        
+        // Check if there's an existing conversation
+        var existingConversationId = await BoardGameFaqService.GetConversationIdAsync(game.BoardGameId, UserContext.UserId);
+        
+        if (existingConversationId.HasValue)
+        {
+            // Load existing conversation and ask as follow-up
+            currentConversationId = existingConversationId.Value;
+            faqConversation = (await BoardGameFaqService.GetConversationHistoryAsync(currentConversationId.Value)).ToList();
+            StateHasChanged();
+            
+            // Set the question and ask as follow-up
+            followUpQuestion = question;
+            await AskFollowUp();
+            return;
+        }
+        
+        // New conversation - ask the question
+        faqConversation = null;
+        currentConversationId = null;
+        isLoadingFaqResponse = true;
+        StateHasChanged();
+
+        try
+        {
+            var response = await BoardGameFaqService.GetAnswerAsync(
+                game.BoardGameId,
+                game.GameName,
+                question,
+                UserContext.UserId
+            );
+
+            currentConversationId = response.ConversationId;
+            
+            // Load conversation history
+            if (currentConversationId != Guid.Empty)
+            {
+                faqConversation = (await BoardGameFaqService.GetConversationHistoryAsync(currentConversationId.Value)).ToList();
+            }
+            else
+            {
+                // Fallback if conversation wasn't created
+                faqConversation = new List<BoardGameConversationMessage>
+                {
+                    new BoardGameConversationMessage
+                    {
+                        Role = "user",
+                        Content = question
+                    },
+                    new BoardGameConversationMessage
+                    {
+                        Role = "assistant",
+                        Content = response.Answer
+                    }
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error asking question for game {GameName}", game.GameName);
+            faqConversation = new List<BoardGameConversationMessage>
+            {
+                new BoardGameConversationMessage
+                {
+                    Role = "user",
+                    Content = question
+                },
+                new BoardGameConversationMessage
+                {
+                    Role = "assistant",
+                    Content = "Sorry, an error occurred while generating the answer. Please try again later."
+                }
+            };
+        }
+        finally
+        {
+            isLoadingFaqResponse = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task AskFollowUp()
+    {
+        if (selectedGameForFaq == null)
+            return;
+
+        // If no conversation exists yet, create one with the follow-up question
+        if (!currentConversationId.HasValue)
+        {
+            var existingConversationId = await BoardGameFaqService.GetConversationIdAsync(
+                selectedGameForFaq.BoardGameId, 
+                UserContext.UserId
+            );
+            
+            if (existingConversationId.HasValue)
+            {
+                currentConversationId = existingConversationId.Value;
+                faqConversation = (await BoardGameFaqService.GetConversationHistoryAsync(currentConversationId.Value)).ToList();
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(followUpQuestion) || !currentConversationId.HasValue)
+            return;
+
+        var question = followUpQuestion.Trim();
+        followUpQuestion = string.Empty;
+        isLoadingFaqResponse = true;
+        StateHasChanged();
+
+        try
+        {
+            var answer = await BoardGameFaqService.AskFollowUpAsync(
+                selectedGameForFaq.BoardGameId,
+                selectedGameForFaq.GameName,
+                question,
+                UserContext.UserId,
+                currentConversationId.Value
+            );
+
+            // Reload conversation history
+            faqConversation = (await BoardGameFaqService.GetConversationHistoryAsync(currentConversationId.Value)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error asking follow-up question");
+            if (faqConversation != null)
+            {
+                faqConversation.Add(new BoardGameConversationMessage
+                {
+                    Role = "user",
+                    Content = question
+                });
+                faqConversation.Add(new BoardGameConversationMessage
+                {
+                    Role = "assistant",
+                    Content = "Sorry, an error occurred while generating the answer. Please try again later."
+                });
+            }
+        }
+        finally
+        {
+            isLoadingFaqResponse = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnFollowUpKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(followUpQuestion))
+        {
+            await AskFollowUp();
+        }
+    }
+
+    private void CloseFaqModal()
+    {
+        selectedGameForFaq = null;
+        faqConversation = null;
+        currentConversationId = null;
+        followUpQuestion = string.Empty;
+        isLoadingFaqResponse = false;
     }
 }
 

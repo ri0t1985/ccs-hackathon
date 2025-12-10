@@ -14,6 +14,9 @@ public class ApplicationDbContext : DbContext
         public DbSet<BoardGameCache> BoardGameCaches { get; set; }
         public DbSet<BoardGame> BoardGames { get; set; }
         public DbSet<Session> Sessions { get; set; }
+        public DbSet<BoardGameFaqCache> BoardGameFaqCaches { get; set; }
+        public DbSet<BoardGameConversation> BoardGameConversations { get; set; }
+        public DbSet<BoardGameConversationMessage> BoardGameConversationMessages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -108,6 +111,67 @@ public class ApplicationDbContext : DbContext
                 .WithMany(bg => bg.BoardGameCaches)
                 .HasForeignKey(e => e.BoardGameId)
                 .OnDelete(DeleteBehavior.Restrict); // Prevent deleting board games that are referenced
+        });
+
+        // Configure BoardGameFaqCache entity
+        modelBuilder.Entity<BoardGameFaqCache>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.BoardGameId).IsRequired();
+            entity.Property(e => e.Question).IsRequired();
+            entity.Property(e => e.Answer).IsRequired();
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.LastUpdatedAt).IsRequired();
+            
+            // Configure many-to-one relationship: BoardGameFaqCache -> BoardGame
+            entity.HasOne(e => e.BoardGame)
+                .WithMany()
+                .HasForeignKey(e => e.BoardGameId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            // Index for faster lookups
+            entity.HasIndex(e => new { e.BoardGameId, e.Question });
+        });
+
+        // Configure BoardGameConversation entity
+        modelBuilder.Entity<BoardGameConversation>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.BoardGameId).IsRequired();
+            entity.Property(e => e.UserId).IsRequired();
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.LastUpdatedAt).IsRequired();
+            
+            // Configure many-to-one relationship: BoardGameConversation -> BoardGame
+            entity.HasOne(e => e.BoardGame)
+                .WithMany()
+                .HasForeignKey(e => e.BoardGameId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            // Configure one-to-many relationship: BoardGameConversation -> BoardGameConversationMessage
+            entity.HasMany(e => e.Messages)
+                .WithOne(m => m.Conversation)
+                .HasForeignKey(m => m.ConversationId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            // Index for faster lookups
+            entity.HasIndex(e => new { e.BoardGameId, e.UserId });
+        });
+
+        // Configure BoardGameConversationMessage entity
+        modelBuilder.Entity<BoardGameConversationMessage>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ConversationId).IsRequired();
+            entity.Property(e => e.Role).IsRequired();
+            entity.Property(e => e.Content).IsRequired();
+            entity.Property(e => e.CreatedAt).IsRequired();
+            
+            // Configure many-to-one relationship: BoardGameConversationMessage -> BoardGameConversation
+            entity.HasOne(e => e.Conversation)
+                .WithMany(c => c.Messages)
+                .HasForeignKey(e => e.ConversationId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
