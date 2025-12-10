@@ -11,71 +11,78 @@
 <PageTitle>Register Game</PageTitle>
 
 <div class="container mt-4">
-    <h2>Register Your Games</h2>
-    <p class="text-muted">Logged in as: <strong>@UserContext.DisplayName</strong> (@UserContext.Email)</p>
-    
-    <EditForm Model="@registrationModel" OnValidSubmit="HandleValidSubmit">
-        <DataAnnotationsValidator />
-        
-        <div class="mb-3">
-            <label for="name" class="form-label">Your Name</label>
-            <InputText id="name" class="form-control" @bind-Value="registrationModel.Name" />
-            <ValidationMessage For="@(() => registrationModel.Name)" />
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h2 class="mb-0">Register Your Games</h2>
         </div>
-        
-        <div class="mb-3">
-            <label class="form-label">Board Games</label>
-            <p class="text-muted small">Add one or more board games you plan to bring</p>
+        <div class="card-body">
+            <p class="text-muted mb-4">Logged in as: <strong>@UserContext.DisplayName</strong> (@UserContext.Email)</p>
             
-            @for (int i = 0; i < registrationModel.Games.Count; i++)
-            {
-                var index = i;
-                <div class="input-group mb-2">
-                    <InputText class="form-control" 
-                               placeholder="Enter board game name" 
-                               @bind-Value="registrationModel.Games[index]" />
-                    <button type="button" 
-                            class="btn btn-outline-danger" 
-                            @onclick="() => RemoveGame(index)"
-                            disabled="@(registrationModel.Games.Count <= 1)">
-                        Remove
-                    </button>
+            <EditForm Model="@registrationModel" OnValidSubmit="HandleValidSubmit">
+                <DataAnnotationsValidator />
+                
+                <div class="mb-3">
+                    <label for="name" class="form-label fw-bold">Your Name</label>
+                    <InputText id="name" class="form-control" @bind-Value="registrationModel.Name" />
+                    <ValidationMessage For="@(() => registrationModel.Name)" />
                 </div>
-            }
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Board Games</label>
+                    <p class="text-muted small">Add one or more board games you plan to bring</p>
+                    <div class="border rounded p-3 bg-light">
             
-            <button type="button" 
-                    class="btn btn-outline-secondary btn-sm" 
-                    @onclick="AddGame">
-                + Add Another Game
-            </button>
-            <ValidationMessage For="@(() => registrationModel.Games)" />
-        </div>
-        
-        <div class="mb-3">
-            <label for="sessionId" class="form-label">Session Date (Optional)</label>
-            <InputSelect id="sessionId" class="form-select" @bind-Value="registrationModel.SessionId">
-                <option value="">-- Select a session --</option>
-                @if (sessions != null)
-                {
-                    @foreach (var session in sessions)
-                    {
-                        <option value="@session.Id">@session.Date.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</option>
-                    }
-                }
-            </InputSelect>
-            <small class="form-text text-muted">Select a session date if registering for a specific game night</small>
-        </div>
-        
-        <div class="mb-3">
-            <label for="foodRequirements" class="form-label">Food Requirements (Optional)</label>
-            <InputTextArea id="foodRequirements" 
-                          class="form-control" 
-                          rows="3"
-                          placeholder="Enter any dietary restrictions or food preferences..."
-                          @bind-Value="registrationModel.FoodRequirements" />
-        </div>
-        
-        <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                        @for (int i = 0; i < registrationModel.Games.Count; i++)
+                        {
+                            var index = i;
+                            <div class="input-group mb-2">
+                                <InputText class="form-control" 
+                                           placeholder="Enter board game name" 
+                                           @bind-Value="registrationModel.Games[index]" />
+                                <button type="button" 
+                                        class="btn btn-outline-danger" 
+                                        @onclick="() => RemoveGame(index)"
+                                        disabled="@(registrationModel.Games.Count <= 1)">
+                                    Remove
+                                </button>
+                            </div>
+                        }
+                        
+                        <button type="button" 
+                                class="btn btn-outline-secondary btn-sm" 
+                                @onclick="AddGame">
+                            + Add Another Game
+                        </button>
+                        <ValidationMessage For="@(() => registrationModel.Games)" />
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="sessionId" class="form-label fw-bold">Session Date (Optional)</label>
+                    <InputSelect id="sessionId" class="form-select" @bind-Value="registrationModel.SessionId">
+                        <option value="">-- Select a session --</option>
+                        @if (sessions != null)
+                        {
+                            @foreach (var session in sessions)
+                            {
+                                <option value="@session.Id">@session.Date.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</option>
+                            }
+                        }
+                    </InputSelect>
+                    <small class="form-text text-muted">Select a session date if registering for a specific game night</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="foodRequirements" class="form-label fw-bold">Food Requirements (Optional)</label>
+                    <InputTextArea id="foodRequirements" 
+                                  class="form-control" 
+                                  rows="3"
+                                  placeholder="Enter any dietary restrictions or food preferences..."
+                                  @bind-Value="registrationModel.FoodRequirements" />
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg" disabled="@isSubmitting">
             @if (isSubmitting)
             {
                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
@@ -84,16 +91,19 @@
             else
             {
                 <text>Register</text>
+                    }
+                    </button>
+                </div>
+            </EditForm>
+            
+            @if (!string.IsNullOrEmpty(message))
+            {
+                <div class="alert @(isError ? "alert-danger" : "alert-success") mt-3" role="alert">
+                    @message
+                </div>
             }
-        </button>
-    </EditForm>
-    
-    @if (!string.IsNullOrEmpty(message))
-    {
-        <div class="alert @(isError ? "alert-danger" : "alert-success") mt-3" role="alert">
-            @message
         </div>
-    }
+    </div>
 </div>
 
 @code {

@@ -88,21 +88,41 @@
                         <tr>
                             <td><strong>@game.GameName</strong></td>
                             <td>
+                                @{
+                                    var truncatedDesc = TruncateDescription(game.Summary, out var showMore, 10);
+                                    var gameNameKey = $"desc_{game.GameName}";
+                                    var isExpanded = expandedDescriptions.Contains(gameNameKey);
+                                }
                                 @if (string.IsNullOrWhiteSpace(game.Summary))
                                 {
                                     <span class="text-muted fst-italic">No description available</span>
                                 }
+                                else if (showMore && !isExpanded)
+                                {
+                                    <span>@truncatedDesc</span>
+                                    <button class="btn btn-link btn-sm p-0 ms-1 text-primary" @onclick="() => ToggleDescription(gameNameKey)">
+                                        Show more
+                                    </button>
+                                }
+                                else if (showMore && isExpanded)
+                                {
+                                    <div>@game.Summary</div>
+                                    <button class="btn btn-link btn-sm p-0 mt-1 text-primary" @onclick="() => ToggleDescription(gameNameKey)">
+                                        Show less
+                                    </button>
+                                }
                                 else
                                 {
-                                    @game.Summary
+                                    <span>@game.Summary</span>
                                 }
                             </td>
                             <td>
                                 @if (game.Complexity.HasValue)
                                 {
-                                    <span class="badge bg-@GetComplexityBadgeColor(game.Complexity.Value)">
-                                        @game.Complexity.Value.ToString("F1")/5.0
-                                    </span>
+                                    <div>
+                                        @((MarkupString)RenderStarRating(game.Complexity.Value))
+                                        <span class="ms-2 small text-muted">@game.Complexity.Value.ToString("F1")/5.0</span>
+                                    </div>
                                 }
                                 else
                                 {
@@ -185,6 +205,7 @@
     private Guid? selectedSessionId;
     private Dictionary<string, int> participantCounts = new();
     private Dictionary<string, bool> participantStatus = new();
+    private HashSet<string> expandedDescriptions = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -231,13 +252,23 @@
         participantCounts.Clear();
         participantStatus.Clear();
 
-        foreach (var game in games)
+        try
         {
-            var count = await SessionService.GetParticipantCountAsync(selectedSessionId.Value, game.GameName);
-            participantCounts[game.GameName] = count;
+            foreach (var game in games)
+            {
+                var count = await SessionService.GetParticipantCountAsync(selectedSessionId.Value, game.GameName);
+                participantCounts[game.GameName] = count;
+                
+                var isParticipant = await SessionService.IsParticipantAsync(selectedSessionId.Value, game.GameName, UserContext.UserId);
+                participantStatus[game.GameName] = isParticipant;
+            }
             
-            var isParticipant = await SessionService.IsParticipantAsync(selectedSessionId.Value, game.GameName, UserContext.UserId);
-            participantStatus[game.GameName] = isParticipant;
+            // Force UI update
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading participant data");
         }
     }
 
@@ -329,16 +360,57 @@
         };
     }
 
-    private string GetComplexityBadgeColor(decimal complexity)
+    private void ToggleDescription(string key)
     {
-        if (complexity < 2.0m)
-            return "success";    // Easy (green)
-        else if (complexity < 3.0m)
-            return "info";       // Medium-Easy (blue)
-        else if (complexity < 4.0m)
-            return "warning";    // Medium-Hard (yellow)
+        if (expandedDescriptions.Contains(key))
+        {
+            expandedDescriptions.Remove(key);
+        }
         else
-            return "danger";     // Hard (red)
+        {
+            expandedDescriptions.Add(key);
+        }
+    }
+    
+    private string RenderStarRating(decimal value, decimal maxValue = 5.0m)
+    {
+        var fullStars = (int)Math.Floor(value);
+        var hasHalfStar = value % 1 >= 0.5m;
+        var emptyStars = (int)maxValue - fullStars - (hasHalfStar ? 1 : 0);
+        
+        var html = "";
+        for (int i = 0; i < fullStars; i++)
+        {
+            html += "<span class=\"text-warning\">★</span>";
+        }
+        if (hasHalfStar)
+        {
+            html += "<span class=\"text-warning\" style=\"opacity: 0.5;\">★</span>";
+        }
+        for (int i = 0; i < emptyStars; i++)
+        {
+            html += "<span class=\"text-muted\">☆</span>";
+        }
+        return html;
+    }
+    
+    private string TruncateDescription(string? text, out bool shouldShowMore, int maxWords = 10)
+    {
+        shouldShowMore = false;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return string.Empty;
+        }
+        
+        var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        shouldShowMore = words.Length > maxWords;
+        
+        if (shouldShowMore)
+        {
+            return string.Join(" ", words.Take(maxWords)) + "...";
+        }
+        
+        return text;
     }
 }
 

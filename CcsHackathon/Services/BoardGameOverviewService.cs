@@ -14,30 +14,36 @@ public class BoardGameOverviewService : IBoardGameOverviewService
 
     public async Task<IEnumerable<BoardGameOverviewItem>> GetBoardGamesAsync(Guid? sessionId = null)
     {
-        IQueryable<BoardGameCache> query = _dbContext.BoardGameCaches
-            .Include(g => g.GameRegistration)
-                .ThenInclude(gr => gr.Registration);
+        // Get all unique game names from GameRegistrations (including those without AI data)
+        IQueryable<GameRegistration> gameRegistrationsQuery = _dbContext.GameRegistrations
+            .Include(gr => gr.Registration)
+            .Include(gr => gr.BoardGameCache);
 
         // If sessionId is provided, filter games that are registered for that session
         if (sessionId.HasValue)
         {
-            query = query.Where(g => g.GameRegistration.Registration.SessionId == sessionId.Value);
+            gameRegistrationsQuery = gameRegistrationsQuery.Where(gr => gr.Registration.SessionId == sessionId.Value);
         }
 
-        // Get all games first, then project
-        var gamesList = await query.ToListAsync();
+        var gameRegistrations = await gameRegistrationsQuery.ToListAsync();
 
-        var games = gamesList
-            .OrderBy(g => g.GameName)
-            .Select(g => new BoardGameOverviewItem
+        // Group by game name to get unique games, preferring entries with AI data
+        var uniqueGames = gameRegistrations
+            .GroupBy(gr => gr.GameId)
+            .Select(g => g.OrderByDescending(gr => gr.BoardGameCache?.HasAiData ?? false).First())
+            .ToList();
+
+        var games = uniqueGames
+            .Select(gr => new BoardGameOverviewItem
             {
-                GameName = g.GameName,
-                Summary = g.Summary,
-                Complexity = g.Complexity,
-                TimeToSetupMinutes = g.TimeToSetupMinutes,
-                HasAiData = g.HasAiData,
-                LastUpdatedAt = g.LastUpdatedAt
+                GameName = gr.GameId,
+                Summary = gr.BoardGameCache?.Summary,
+                Complexity = gr.BoardGameCache?.Complexity,
+                TimeToSetupMinutes = gr.BoardGameCache?.TimeToSetupMinutes,
+                HasAiData = gr.BoardGameCache?.HasAiData ?? false,
+                LastUpdatedAt = gr.BoardGameCache?.LastUpdatedAt ?? gr.Registration.CreatedAt
             })
+            .OrderBy(g => g.GameName)
             .ToList();
 
         return games;
