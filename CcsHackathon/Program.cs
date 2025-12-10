@@ -91,6 +91,7 @@ else
     builder.Services.AddScoped<IGraphService, DummyGraphService>();
 }
 builder.Services.AddScoped<IAgentOrchestrator, AgentOrchestrator>();
+builder.Services.AddScoped<IRegistrationService, RegistrationService>();
 
 // Register DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>

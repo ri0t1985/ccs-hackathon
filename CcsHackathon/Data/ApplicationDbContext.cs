@@ -23,6 +23,7 @@ public class ApplicationDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired();
             entity.Property(e => e.UserDisplayName).IsRequired();
+            entity.Property(e => e.FoodRequirements).IsRequired(false);
             entity.Property(e => e.CreatedAt).IsRequired();
         });
 
