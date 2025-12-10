@@ -5,6 +5,8 @@
 @attribute [Authorize]
 @inject IUserContext UserContext
 @inject IRegistrationService RegistrationService
+@inject ISessionService SessionService
+@inject ILogger<RegisterGame> Logger
 
 <PageTitle>Register Game</PageTitle>
 
@@ -50,6 +52,21 @@
         </div>
         
         <div class="mb-3">
+            <label for="sessionId" class="form-label">Session Date (Optional)</label>
+            <InputSelect id="sessionId" class="form-select" @bind-Value="registrationModel.SessionId">
+                <option value="">-- Select a session --</option>
+                @if (sessions != null)
+                {
+                    @foreach (var session in sessions)
+                    {
+                        <option value="@session.Id">@session.Date.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</option>
+                    }
+                }
+            </InputSelect>
+            <small class="form-text text-muted">Select a session date if registering for a specific game night</small>
+        </div>
+        
+        <div class="mb-3">
             <label for="foodRequirements" class="form-label">Food Requirements (Optional)</label>
             <InputTextArea id="foodRequirements" 
                           class="form-control" 
@@ -84,13 +101,25 @@
     private string message = string.Empty;
     private bool isSubmitting = false;
     private bool isError = false;
+    private List<Session>? sessions;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         // Pre-fill name from user context
         registrationModel.Name = UserContext.DisplayName;
         // Start with one empty game field
         registrationModel.Games.Add(string.Empty);
+        
+        // Load available sessions
+        try
+        {
+            sessions = (await SessionService.GetAllSessionsAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading sessions");
+            sessions = new List<Session>();
+        }
     }
 
     private void AddGame()
@@ -134,7 +163,8 @@
                 string.IsNullOrWhiteSpace(registrationModel.FoodRequirements) 
                     ? null 
                     : registrationModel.FoodRequirements.Trim(),
-                gameNames
+                gameNames,
+                registrationModel.SessionId
             );
 
             message = $"Thank you, {registrationModel.Name}! Your registration for {gameNames.Count} game(s) has been saved successfully.";
@@ -165,5 +195,7 @@
         public List<string> Games { get; set; } = new();
 
         public string? FoodRequirements { get; set; }
+        
+        public Guid? SessionId { get; set; }
     }
 }

@@ -93,6 +93,8 @@ else
 builder.Services.AddScoped<IAgentOrchestrator, AgentOrchestrator>();
 builder.Services.AddScoped<IRegistrationService, RegistrationService>();
 builder.Services.AddScoped<IBoardGameAiService, BoardGameAiService>();
+builder.Services.AddScoped<ISessionService, SessionService>();
+builder.Services.AddScoped<IBoardGameOverviewService, BoardGameOverviewService>();
 builder.Services.AddScoped<IBoardGameOverviewService, BoardGameOverviewService>();
 
 // Register background service for AI data processing
@@ -143,11 +145,13 @@ using (var scope = app.Services.CreateScope())
                 await dbContext.Registrations.CountAsync();
                 await dbContext.GameRegistrations.CountAsync();
                 await dbContext.BoardGameCaches.CountAsync();
+                await dbContext.Sessions.CountAsync();
+                await dbContext.GameParticipants.CountAsync();
                 
                 // Try to access a newer column to ensure it exists
                 // If FoodRequirements or AI fields don't exist, this will fail
                 var testQuery = await dbContext.Registrations
-                    .Select(r => new { r.Id, r.FoodRequirements })
+                    .Select(r => new { r.Id, r.FoodRequirements, r.SessionId })
                     .FirstOrDefaultAsync();
                 
                 var testAiQuery = await dbContext.BoardGameCaches

@@ -1,0 +1,265 @@
+@page "/sessions"
+@using System.ComponentModel.DataAnnotations
+@using CcsHackathon.Services
+@using CcsHackathon.Data
+@attribute [Authorize]
+@inject ISessionService SessionService
+@inject ILogger<SessionManagement> Logger
+
+<PageTitle>Session Management</PageTitle>
+
+<div class="container mt-4">
+    <h2>Board Game Session Planning</h2>
+    <p class="text-muted">Create and manage board game sessions</p>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <h3>Create New Session</h3>
+            <EditForm Model="@sessionModel" OnValidSubmit="HandleCreateSession">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                
+                <div class="mb-3">
+                    <label for="sessionDate" class="form-label">Session Date</label>
+                    <InputDate TValue="DateOnly" id="sessionDate" class="form-control" 
+                               Value="sessionModel.Date" 
+                               ValueChanged="@((DateOnly value) => sessionModel.Date = value)"
+                               ValueExpression="@(() => sessionModel.Date)" />
+                    <ValidationMessage For="@(() => sessionModel.Date)" />
+                </div>
+                
+                <div class="mb-3">
+                    <label for="sessionTime" class="form-label">Time</label>
+                    <InputTime TValue="TimeOnly" id="sessionTime" class="form-control" 
+                               Value="sessionModel.Time" 
+                               ValueChanged="@((TimeOnly value) => sessionModel.Time = value)"
+                               ValueExpression="@(() => sessionModel.Time)" />
+                </div>
+                
+                <button type="submit" class="btn btn-primary" disabled="@isCreating">
+                    @if (isCreating)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <text>Creating...</text>
+                    }
+                    else
+                    {
+                        <text>Create Session</text>
+                    }
+                </button>
+            </EditForm>
+            
+            @if (!string.IsNullOrEmpty(createMessage))
+            {
+                <div class="alert @(isCreateError ? "alert-danger" : "alert-success") mt-3" role="alert">
+                    @createMessage
+                </div>
+            }
+        </div>
+        
+        <div class="col-md-6">
+            <h3>Existing Sessions</h3>
+            @if (sessions == null)
+            {
+                <p>Loading sessions...</p>
+            }
+            else if (!sessions.Any())
+            {
+                <p class="text-muted">No sessions created yet.</p>
+            }
+            else
+            {
+                <div class="list-group">
+                    @foreach (var session in sessions)
+                    {
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">@session.Date.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</h5>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-secondary me-2" 
+                                            @onclick="() => EditSession(session)"
+                                            title="Reschedule">
+                                        <span>✏️</span>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" 
+                                            @onclick="() => CancelSession(session.Id)"
+                                            title="Cancel">
+                                        <span>❌</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="mb-1 small text-muted">Created: @session.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</p>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+    
+    @if (editingSession != null)
+    {
+        <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Reschedule Session</h5>
+                        <button type="button" class="btn-close" @onclick="CancelEdit"></button>
+                    </div>
+                    <div class="modal-body">
+                        <EditForm Model="@editSessionModel" OnValidSubmit="HandleUpdateSession">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+                            
+                            <div class="mb-3">
+                                <label for="editSessionDate" class="form-label">New Date</label>
+                                <InputDate TValue="DateOnly" id="editSessionDate" class="form-control" 
+                                           Value="editSessionModel.Date" 
+                                           ValueChanged="@((DateOnly value) => editSessionModel.Date = value)"
+                                           ValueExpression="@(() => editSessionModel.Date)" />
+                                <ValidationMessage For="@(() => editSessionModel.Date)" />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="editSessionTime" class="form-label">New Time</label>
+                                <InputTime TValue="TimeOnly" id="editSessionTime" class="form-control" 
+                                           Value="editSessionModel.Time" 
+                                           ValueChanged="@((TimeOnly value) => editSessionModel.Time = value)"
+                                           ValueExpression="@(() => editSessionModel.Time)" />
+                            </div>
+                            
+                            <div class="d-flex justify-content-end">
+                                <button type="button" class="btn btn-secondary me-2" @onclick="CancelEdit">Cancel</button>
+                                <button type="submit" class="btn btn-primary" disabled="@isUpdating">
+                                    @if (isUpdating)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                    }
+                                    Update Session
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private SessionModel sessionModel = new();
+    private SessionModel? editSessionModel;
+    private Session? editingSession;
+    private List<Session>? sessions;
+    private string createMessage = string.Empty;
+    private bool isCreateError = false;
+    private bool isCreating = false;
+    private bool isUpdating = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSessionsAsync();
+    }
+
+    private async Task LoadSessionsAsync()
+    {
+        try
+        {
+            sessions = (await SessionService.GetAllSessionsAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading sessions");
+            sessions = new List<Session>();
+        }
+    }
+
+    private async Task HandleCreateSession()
+    {
+        isCreating = true;
+        createMessage = string.Empty;
+        isCreateError = false;
+
+        try
+        {
+            var dateTime = sessionModel.Date.ToDateTime(sessionModel.Time);
+            await SessionService.CreateSessionAsync(dateTime);
+            
+            createMessage = "Session created successfully!";
+            sessionModel = new SessionModel();
+            await LoadSessionsAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error creating session");
+            createMessage = $"Error creating session: {ex.Message}";
+            isCreateError = true;
+        }
+        finally
+        {
+            isCreating = false;
+        }
+    }
+
+    private void EditSession(Session session)
+    {
+        editingSession = session;
+        var localDate = session.Date.ToLocalTime();
+        editSessionModel = new SessionModel
+        {
+            Date = DateOnly.FromDateTime(localDate),
+            Time = TimeOnly.FromDateTime(localDate)
+        };
+    }
+
+    private void CancelEdit()
+    {
+        editingSession = null;
+        editSessionModel = null;
+    }
+
+    private async Task HandleUpdateSession()
+    {
+        if (editingSession == null || editSessionModel == null) return;
+
+        isUpdating = true;
+        try
+        {
+            var dateTime = editSessionModel.Date.ToDateTime(editSessionModel.Time);
+            await SessionService.UpdateSessionDateAsync(editingSession.Id, dateTime);
+            
+            editingSession = null;
+            editSessionModel = null;
+            await LoadSessionsAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error updating session");
+        }
+        finally
+        {
+            isUpdating = false;
+        }
+    }
+
+    private async Task CancelSession(Guid sessionId)
+    {
+        try
+        {
+            await SessionService.CancelSessionAsync(sessionId);
+            await LoadSessionsAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cancelling session");
+        }
+    }
+
+    public class SessionModel
+    {
+        [Required(ErrorMessage = "Date is required")]
+        public DateOnly Date { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+
+        public TimeOnly Time { get; set; } = TimeOnly.FromDateTime(DateTime.Now);
+    }
+}
+

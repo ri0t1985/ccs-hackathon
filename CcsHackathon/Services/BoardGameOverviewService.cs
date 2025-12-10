@@ -12,9 +12,22 @@ public class BoardGameOverviewService : IBoardGameOverviewService
         _dbContext = dbContext;
     }
 
-    public async Task<IEnumerable<BoardGameOverviewItem>> GetBoardGamesAsync()
+    public async Task<IEnumerable<BoardGameOverviewItem>> GetBoardGamesAsync(Guid? sessionId = null)
     {
-        var games = await _dbContext.BoardGameCaches
+        IQueryable<BoardGameCache> query = _dbContext.BoardGameCaches
+            .Include(g => g.GameRegistration)
+                .ThenInclude(gr => gr.Registration);
+
+        // If sessionId is provided, filter games that are registered for that session
+        if (sessionId.HasValue)
+        {
+            query = query.Where(g => g.GameRegistration.Registration.SessionId == sessionId.Value);
+        }
+
+        // Get all games first, then project
+        var gamesList = await query.ToListAsync();
+
+        var games = gamesList
             .OrderBy(g => g.GameName)
             .Select(g => new BoardGameOverviewItem
             {
@@ -25,7 +38,7 @@ public class BoardGameOverviewService : IBoardGameOverviewService
                 HasAiData = g.HasAiData,
                 LastUpdatedAt = g.LastUpdatedAt
             })
-            .ToListAsync();
+            .ToList();
 
         return games;
     }

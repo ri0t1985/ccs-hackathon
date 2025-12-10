@@ -12,7 +12,7 @@ public class RegistrationService : IRegistrationService
         _dbContext = dbContext;
     }
 
-    public async Task<Registration> CreateRegistrationAsync(string userId, string userDisplayName, string? foodRequirements, List<string> gameNames)
+    public async Task<Registration> CreateRegistrationAsync(string userId, string userDisplayName, string? foodRequirements, List<string> gameNames, Guid? sessionId = null)
     {
         var registration = new Registration
         {
@@ -20,7 +20,8 @@ public class RegistrationService : IRegistrationService
             UserId = userId,
             UserDisplayName = userDisplayName,
             FoodRequirements = foodRequirements,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            SessionId = sessionId
         };
 
         foreach (var gameName in gameNames)
