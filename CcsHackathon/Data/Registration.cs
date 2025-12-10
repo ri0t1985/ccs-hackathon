@@ -11,4 +11,3 @@ public class Registration
     // Navigation property for one-to-many relationship
     public ICollection<GameRegistration> GameRegistrations { get; set; } = new List<GameRegistration>();
 }
-
