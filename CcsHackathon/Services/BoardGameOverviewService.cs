@@ -22,11 +22,12 @@ public class BoardGameOverviewService : IBoardGameOverviewService
 
         // Get board games from GameRegistrations that are registered for the specified session
         // Query: GameRegistration -> Registration -> SessionId
+        // Ensure we filter by the exact SessionId match
         var gameRegistrations = await _dbContext.GameRegistrations
             .Include(gr => gr.Registration)
             .Include(gr => gr.BoardGame)
             .Include(gr => gr.BoardGameCache)
-            .Where(gr => gr.Registration.SessionId == sessionId.Value)
+            .Where(gr => gr.Registration.SessionId != null && gr.Registration.SessionId.Value == sessionId.Value)
             .ToListAsync();
 
         if (!gameRegistrations.Any())
