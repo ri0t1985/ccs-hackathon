@@ -9,11 +9,10 @@ public class ApplicationDbContext : DbContext
     {
     }
 
-    public DbSet<Registration> Registrations { get; set; }
-    public DbSet<GameRegistration> GameRegistrations { get; set; }
-    public DbSet<BoardGameCache> BoardGameCaches { get; set; }
-    public DbSet<Session> Sessions { get; set; }
-    public DbSet<GameParticipant> GameParticipants { get; set; }
+        public DbSet<Registration> Registrations { get; set; }
+        public DbSet<GameRegistration> GameRegistrations { get; set; }
+        public DbSet<BoardGameCache> BoardGameCaches { get; set; }
+        public DbSet<Session> Sessions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -84,26 +83,6 @@ public class ApplicationDbContext : DbContext
 
             // Configure unique constraint on GameName
             entity.HasIndex(e => e.GameName).IsUnique();
-        });
-
-        // Configure GameParticipant entity
-        modelBuilder.Entity<GameParticipant>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.SessionId).IsRequired();
-            entity.Property(e => e.GameName).IsRequired();
-            entity.Property(e => e.UserId).IsRequired();
-            entity.Property(e => e.UserDisplayName).IsRequired();
-            entity.Property(e => e.CreatedAt).IsRequired();
-
-            // Configure many-to-one relationship: GameParticipant -> Session
-            entity.HasOne(e => e.Session)
-                .WithMany(s => s.GameParticipants)
-                .HasForeignKey(e => e.SessionId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            // Ensure a user can only express interest in a game once per session
-            entity.HasIndex(e => new { e.SessionId, e.GameName, e.UserId }).IsUnique();
         });
     }
 }

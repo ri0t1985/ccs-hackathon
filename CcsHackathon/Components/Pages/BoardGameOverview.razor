@@ -4,7 +4,6 @@
 @attribute [Authorize]
 @inject IBoardGameOverviewService BoardGameOverviewService
 @inject ISessionService SessionService
-@inject IUserContext UserContext
 @inject ILogger<BoardGameOverview> Logger
 
 <PageTitle>Board Games Overview</PageTitle>
@@ -62,7 +61,6 @@
                                 }
                             </button>
                         </th>
-                        <th>Description/Summary</th>
                         <th>
                             <button class="btn btn-link p-0 text-decoration-none text-reset fw-bold" 
                                     @onclick="() => SortBy(nameof(BoardGameOverviewItem.Complexity))"
@@ -76,7 +74,6 @@
                         </th>
                         <th>Setup Time</th>
                         <th>AI Data</th>
-                        <th>Participants</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -86,41 +83,9 @@
                         <tr>
                             <td><strong>@game.GameName</strong></td>
                             <td>
-                                @{
-                                    var truncatedDesc = TruncateDescription(game.Summary, out var showMore, 10);
-                                    var gameNameKey = $"desc_{game.GameName}";
-                                    var isExpanded = expandedDescriptions.Contains(gameNameKey);
-                                }
-                                @if (string.IsNullOrWhiteSpace(game.Summary))
-                                {
-                                    <span class="text-muted fst-italic">No description available</span>
-                                }
-                                else if (showMore && !isExpanded)
-                                {
-                                    <span>@truncatedDesc</span>
-                                    <button class="btn btn-link btn-sm p-0 ms-1 text-primary" @onclick="() => ToggleDescription(gameNameKey)">
-                                        Show more
-                                    </button>
-                                }
-                                else if (showMore && isExpanded)
-                                {
-                                    <div>@game.Summary</div>
-                                    <button class="btn btn-link btn-sm p-0 mt-1 text-primary" @onclick="() => ToggleDescription(gameNameKey)">
-                                        Show less
-                                    </button>
-                                }
-                                else
-                                {
-                                    <span>@game.Summary</span>
-                                }
-                            </td>
-                            <td>
                                 @if (game.Complexity.HasValue)
                                 {
-                                    <div>
-                                        @((MarkupString)RenderStarRating(game.Complexity.Value))
-                                        <span class="ms-2 small text-muted">@game.Complexity.Value.ToString("F1")/5.0</span>
-                                    </div>
+                                    @((MarkupString)RenderStarRating(game.Complexity.Value))
                                 }
                                 else
                                 {
@@ -148,38 +113,16 @@
                                 }
                             </td>
                             <td>
-                                @if (selectedSessionId.HasValue)
+                                @if (!string.IsNullOrWhiteSpace(game.Summary))
                                 {
-                                    <span class="badge bg-info">@game.ParticipantCount</span>
+                                    <button class="btn btn-sm btn-outline-primary" 
+                                            @onclick="() => ShowDescriptionModal(game)">
+                                        View Description
+                                    </button>
                                 }
                                 else
                                 {
-                                    <span class="text-muted">—</span>
-                                }
-                            </td>
-                            <td>
-                                @if (selectedSessionId.HasValue)
-                                {
-                                    @if (game.IsUserParticipating)
-                                    {
-                                        <button class="btn btn-sm btn-outline-danger" 
-                                                @onclick="() => RemoveParticipant(game.GameName)"
-                                                title="Remove interest">
-                                            ❌ Not Interested
-                                        </button>
-                                    }
-                                    else
-                                    {
-                                        <button class="btn btn-sm btn-primary" 
-                                                @onclick="() => AddParticipant(game.GameName)"
-                                                title="Express interest">
-                                            👍 I want to play this
-                                        </button>
-                                    }
-                                }
-                                else
-                                {
-                                    <span class="text-muted small">Select a session</span>
+                                    <span class="text-muted small">No description</span>
                                 }
                             </td>
                         </tr>
@@ -194,6 +137,51 @@
     }
 </div>
 
+@* Description Modal *@
+@if (selectedGameForDescription != null)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@selectedGameForDescription.GameName</h5>
+                    <button type="button" class="btn-close" @onclick="CloseDescriptionModal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <h6 class="fw-bold">Description</h6>
+                        <p>@selectedGameForDescription.Summary</p>
+                    </div>
+                    
+                    @if (selectedGameForDescription.Complexity.HasValue || selectedGameForDescription.TimeToSetupMinutes.HasValue)
+                    {
+                        <div class="border-top pt-3">
+                            @if (selectedGameForDescription.Complexity.HasValue)
+                            {
+                                <div class="mb-2">
+                                    <h6 class="fw-bold mb-1">Complexity</h6>
+                                    <div>@((MarkupString)RenderStarRating(selectedGameForDescription.Complexity.Value))</div>
+                                </div>
+                            }
+                            @if (selectedGameForDescription.TimeToSetupMinutes.HasValue)
+                            {
+                                <div>
+                                    <h6 class="fw-bold mb-1">Setup Time</h6>
+                                    <p class="mb-0">@selectedGameForDescription.TimeToSetupMinutes.Value minutes</p>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDescriptionModal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
 @code {
     private IEnumerable<BoardGameOverviewItem>? games;
     private IEnumerable<BoardGameOverviewItem> sortedGames = Enumerable.Empty<BoardGameOverviewItem>();
@@ -201,7 +189,7 @@
     private bool sortAscending = true;
     private List<Session>? sessions;
     private Guid? selectedSessionId;
-    private HashSet<string> expandedDescriptions = new();
+    private BoardGameOverviewItem? selectedGameForDescription;
 
     protected override async Task OnInitializedAsync()
     {
@@ -222,8 +210,8 @@
     {
         try
         {
-            // Fetch all data in a single query (games + participant counts + user participation status)
-            games = await BoardGameOverviewService.GetBoardGamesAsync(selectedSessionId, UserContext.UserId);
+            // Fetch all games data
+            games = await BoardGameOverviewService.GetBoardGamesAsync(selectedSessionId);
             ApplySorting();
             
             // Force UI update
@@ -245,53 +233,14 @@
         await LoadGamesAsync();
     }
 
-    private async Task AddParticipant(string gameName)
+    private void ShowDescriptionModal(BoardGameOverviewItem game)
     {
-        if (!selectedSessionId.HasValue) return;
-
-        try
-        {
-            var success = await SessionService.AddParticipantAsync(
-                selectedSessionId.Value,
-                gameName,
-                UserContext.UserId,
-                UserContext.DisplayName
-            );
-
-            if (success)
-            {
-                // Reload all data to get updated counts and status
-                await LoadGamesAsync();
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error adding participant");
-        }
+        selectedGameForDescription = game;
     }
-
-    private async Task RemoveParticipant(string gameName)
+    
+    private void CloseDescriptionModal()
     {
-        if (!selectedSessionId.HasValue) return;
-
-        try
-        {
-            var success = await SessionService.RemoveParticipantAsync(
-                selectedSessionId.Value,
-                gameName,
-                UserContext.UserId
-            );
-
-            if (success)
-            {
-                // Reload all data to get updated counts and status
-                await LoadGamesAsync();
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error removing participant");
-        }
+        selectedGameForDescription = null;
     }
 
     private void SortBy(string column)
@@ -328,18 +277,6 @@
         };
     }
 
-    private void ToggleDescription(string key)
-    {
-        if (expandedDescriptions.Contains(key))
-        {
-            expandedDescriptions.Remove(key);
-        }
-        else
-        {
-            expandedDescriptions.Add(key);
-        }
-    }
-    
     private string RenderStarRating(decimal value, decimal maxValue = 5.0m)
     {
         var fullStars = (int)Math.Floor(value);
@@ -360,25 +297,6 @@
             html += "<span class=\"text-muted\">☆</span>";
         }
         return html;
-    }
-    
-    private string TruncateDescription(string? text, out bool shouldShowMore, int maxWords = 10)
-    {
-        shouldShowMore = false;
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return string.Empty;
-        }
-        
-        var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        shouldShowMore = words.Length > maxWords;
-        
-        if (shouldShowMore)
-        {
-            return string.Join(" ", words.Take(maxWords)) + "...";
-        }
-        
-        return text;
     }
 }
 

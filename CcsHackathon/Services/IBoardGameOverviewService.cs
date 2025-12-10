@@ -4,7 +4,7 @@ namespace CcsHackathon.Services;
 
 public interface IBoardGameOverviewService
 {
-    Task<IEnumerable<BoardGameOverviewItem>> GetBoardGamesAsync(Guid? sessionId = null, string? userId = null);
+    Task<IEnumerable<BoardGameOverviewItem>> GetBoardGamesAsync(Guid? sessionId = null);
 }
 
 public record BoardGameOverviewItem
@@ -15,8 +15,5 @@ public record BoardGameOverviewItem
     public int? TimeToSetupMinutes { get; init; }
     public bool HasAiData { get; init; }
     public DateTime LastUpdatedAt { get; init; }
-    // Session-specific data (only populated when sessionId is provided)
-    public int ParticipantCount { get; init; } = 0;
-    public bool IsUserParticipating { get; init; } = false;
 }
 

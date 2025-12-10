@@ -9,9 +9,5 @@ public interface ISessionService
     Task<Session?> GetSessionByIdAsync(Guid sessionId);
     Task<Session> UpdateSessionDateAsync(Guid sessionId, DateOnly newDate);
     Task CancelSessionAsync(Guid sessionId);
-    Task<int> GetParticipantCountAsync(Guid sessionId, string gameName);
-    Task<bool> AddParticipantAsync(Guid sessionId, string gameName, string userId, string userDisplayName);
-    Task<bool> RemoveParticipantAsync(Guid sessionId, string gameName, string userId);
-    Task<bool> IsParticipantAsync(Guid sessionId, string gameName, string userId);
 }
 
