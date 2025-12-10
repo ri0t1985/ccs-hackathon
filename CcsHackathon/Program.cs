@@ -145,11 +145,13 @@ using (var scope = app.Services.CreateScope())
                 await dbContext.Registrations.CountAsync();
                 await dbContext.GameRegistrations.CountAsync();
                 await dbContext.BoardGameCaches.CountAsync();
+                await dbContext.Sessions.CountAsync();
+                await dbContext.GameParticipants.CountAsync();
                 
                 // Try to access a newer column to ensure it exists
                 // If FoodRequirements or AI fields don't exist, this will fail
                 var testQuery = await dbContext.Registrations
-                    .Select(r => new { r.Id, r.FoodRequirements })
+                    .Select(r => new { r.Id, r.FoodRequirements, r.SessionId })
                     .FirstOrDefaultAsync();
                 
                 var testAiQuery = await dbContext.BoardGameCaches
