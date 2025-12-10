@@ -500,6 +500,24 @@
 
     private async Task AskQuestion(BoardGameOverviewItem game, string question)
     {
+        if (game == null || string.IsNullOrWhiteSpace(question))
+        {
+            Logger.LogWarning("AskQuestion called with null game or empty question");
+            return;
+        }
+
+        if (UserContext == null || string.IsNullOrWhiteSpace(UserContext.UserId))
+        {
+            Logger.LogError("UserContext or UserId is null when asking question");
+            return;
+        }
+
+        if (game.BoardGameId == Guid.Empty)
+        {
+            Logger.LogError("Game BoardGameId is empty when asking question for game {GameName}", game.GameName);
+            return;
+        }
+
         selectedGameForFaq = game;
         followUpQuestion = string.Empty;
         
@@ -531,7 +549,7 @@
                 game.BoardGameId,
                 game.GameName,
                 question,
-                UserContext.UserId
+                UserContext?.UserId ?? string.Empty
             );
 
             currentConversationId = response.ConversationId;
@@ -588,6 +606,12 @@
         if (selectedGameForFaq == null)
             return;
 
+        if (UserContext == null || string.IsNullOrWhiteSpace(UserContext.UserId))
+        {
+            Logger.LogError("UserContext or UserId is null when asking follow-up question");
+            return;
+        }
+
         // If no conversation exists yet, create one with the follow-up question
         if (!currentConversationId.HasValue)
         {
@@ -617,7 +641,7 @@
                 selectedGameForFaq.BoardGameId,
                 selectedGameForFaq.GameName,
                 question,
-                UserContext.UserId,
+                UserContext?.UserId ?? string.Empty,
                 currentConversationId.Value
             );
 
