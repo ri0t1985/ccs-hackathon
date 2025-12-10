@@ -5,6 +5,8 @@
 @inject NavigationManager Navigation
 @inject IHttpContextAccessor HttpContextAccessor
 @inject IConfiguration Configuration
+@inject IUserContext UserContext
+@attribute [AllowAnonymous]
 
 <PageTitle>Login</PageTitle>
 
@@ -38,6 +40,12 @@
     protected override void OnInitialized()
     {
         useDummyAuth = Configuration.GetValue<bool>("Features:UseDummyAuth", true);
+        
+        // If already authenticated, redirect to dashboard
+        if (UserContext.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/dashboard", forceLoad: true);
+        }
     }
 }
 
