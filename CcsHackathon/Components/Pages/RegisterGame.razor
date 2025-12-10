@@ -1,0 +1,56 @@
+@page "/register-game"
+@using System.ComponentModel.DataAnnotations
+@attribute [Authorize]
+
+<PageTitle>Register Game</PageTitle>
+
+<div class="container mt-4">
+    <h2>Register Your Game</h2>
+    
+    <EditForm Model="@gameRegistration" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        
+        <div class="mb-3">
+            <label for="name" class="form-label">Your Name</label>
+            <InputText id="name" class="form-control" @bind-Value="gameRegistration.Name" />
+            <ValidationMessage For="@(() => gameRegistration.Name)" />
+        </div>
+        
+        <div class="mb-3">
+            <label for="gameName" class="form-label">Board Game Name</label>
+            <InputText id="gameName" class="form-control" @bind-Value="gameRegistration.GameName" />
+            <ValidationMessage For="@(() => gameRegistration.GameName)" />
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Register</button>
+    </EditForm>
+    
+    @if (!string.IsNullOrEmpty(message))
+    {
+        <div class="alert alert-success mt-3" role="alert">
+            @message
+        </div>
+    }
+</div>
+
+@code {
+    private GameRegistration gameRegistration = new();
+    private string message = string.Empty;
+
+    private void HandleValidSubmit()
+    {
+        // In a real application, this would save to a database
+        message = $"Thank you, {gameRegistration.Name}! Your game '{gameRegistration.GameName}' has been registered.";
+        gameRegistration = new GameRegistration();
+    }
+
+    public class GameRegistration
+    {
+        [Required(ErrorMessage = "Name is required")]
+        public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Game name is required")]
+        public string GameName { get; set; } = string.Empty;
+    }
+}
+

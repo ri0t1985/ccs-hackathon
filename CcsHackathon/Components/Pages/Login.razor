@@ -1,0 +1,22 @@
+@page "/login"
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.OpenIdConnect
+@inject NavigationManager Navigation
+@inject IHttpContextAccessor HttpContextAccessor
+
+<PageTitle>Login</PageTitle>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h2 class="card-title mb-4">Sign in with Microsoft</h2>
+                    <p class="card-text mb-4">Please sign in to access the application.</p>
+                    <a href="/MicrosoftIdentity/Account/SignIn" class="btn btn-primary">Sign In</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

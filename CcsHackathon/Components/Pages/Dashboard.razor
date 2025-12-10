@@ -1,0 +1,60 @@
+@page "/dashboard"
+@using CcsHackathon.Services
+@using Microsoft.Graph.Models
+@attribute [Authorize]
+@inject IGraphService GraphService
+
+<PageTitle>Dashboard</PageTitle>
+
+<div class="container mt-4">
+    <h2>Users</h2>
+    
+    @if (users == null)
+    {
+        <p>Loading users...</p>
+    }
+    else if (!users.Any())
+    {
+        <p>No users found.</p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Display Name</th>
+                    <th>Email</th>
+                    <th>User Principal Name</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in users)
+                {
+                    <tr>
+                        <td>@user.DisplayName</td>
+                        <td>@user.Mail</td>
+                        <td>@user.UserPrincipalName</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    private IEnumerable<User>? users;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            users = await GraphService.GetUsersAsync();
+        }
+        catch (Exception ex)
+        {
+            // Handle error - in production, log this properly
+            Console.WriteLine($"Error loading users: {ex.Message}");
+        }
+    }
+}
+
