@@ -1,15 +1,133 @@
+/* Theme Color Variables - Extracted from CCS BOARDGAMERS logo */
+:root {
+    /* Primary: Dark blue from "CCS" text */
+    --color-primary: #1e3a5f;
+    --color-primary-dark: #152a45;
+    --color-primary-light: #2a4f7a;
+    /* Secondary: Vibrant orange from "BOARDGAMERS" text and orange die */
+    --color-secondary: #ff6b35;
+    --color-secondary-dark: #e55a2b;
+    --color-secondary-light: #ff7f50;
+    /* Accent: Medium blue from blue die */
+    --color-accent: #4a90e2;
+    --color-accent-dark: #3a7bc8;
+    --color-accent-light: #5aa0f0;
+    /* Neutral: Warm brown from pawn */
+    --color-neutral: #8b6f47;
+    /* Links */
+    --color-link: #1e3a5f;
+    --color-link-hover: #ff6b35;
+    /* Buttons */
+    --color-button-primary: #1e3a5f;
+    --color-button-primary-hover: #2a4f7a;
+    --color-button-primary-border: #152a45;
+    --color-button-secondary: #ff6b35;
+    --color-button-secondary-hover: #ff7f50;
+    --color-button-secondary-border: #e55a2b;
+}
+
 html, body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 a, .btn-link {
-    color: #0071c1;
+    color: var(--color-link);
+}
+
+a:hover, .btn-link:hover {
+    color: var(--color-link-hover);
 }
 
 .btn-primary {
     color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
+    background-color: var(--color-button-primary);
+    border-color: var(--color-button-primary-border);
+}
+
+.btn-primary:hover {
+    background-color: var(--color-button-primary-hover);
+    border-color: var(--color-button-primary-hover);
+}
+
+.btn-outline-primary {
+    color: var(--color-button-primary);
+    border-color: var(--color-button-primary);
+}
+
+.btn-outline-primary:hover {
+    color: #fff;
+    background-color: var(--color-button-primary);
+    border-color: var(--color-button-primary);
+}
+
+/* Table headers */
+.table thead th {
+    background-color: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary-dark);
+}
+
+.table thead th button {
+    color: white;
+}
+
+.table thead th button:hover {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Modal headers */
+.modal-header {
+    background-color: var(--color-primary) !important;
+    color: white !important;
+    border-bottom-color: var(--color-primary-dark);
+}
+
+.modal-header .modal-title {
+    color: white;
+}
+
+.modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* Card headers with bg-primary */
+.card-header.bg-primary {
+    background-color: var(--color-primary) !important;
+    border-color: var(--color-primary-dark);
+}
+
+/* Modal footers */
+.modal-footer {
+    border-top-color: var(--color-primary-dark);
+}
+
+/* Alert links */
+.alert-link {
+    color: var(--color-link);
+    font-weight: 600;
+}
+
+.alert-link:hover {
+    color: var(--color-link-hover);
+    text-decoration: underline;
+}
+
+/* Top row links */
+.top-row a {
+    color: var(--color-link);
+}
+
+.top-row a:hover {
+    color: var(--color-link-hover);
+}
+
+/* Form focus states */
+.form-control:focus,
+.form-select:focus,
+.form-control:focus-visible,
+.form-select:focus-visible {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 0.2rem rgba(30, 58, 95, 0.25);
 }
 
 .content {
@@ -74,7 +192,7 @@ a, .btn-link {
 }
 
 .loading-progress circle:last-child {
-    stroke: #1b6ec2;
+    stroke: var(--color-primary);
     stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
     transition: stroke-dasharray 0.05s ease-in-out;
 }
@@ -84,7 +202,7 @@ a, .btn-link {
     text-align: center;
     font-weight: bold;
     inset: calc(20vh + 3.25rem) 0 auto 0.2rem;
-    color: #1b6ec2;
+    color: var(--color-primary);
 }
 
 .loading-progress-text:after {
@@ -104,7 +222,7 @@ a, .btn-link {
     .table-responsive tr {
         display: block;
         margin-bottom: 1rem;
-        border-bottom: 1px solid #dee2e6;
+        border-bottom: 1px solid rgba(30, 58, 95, 0.2);
         padding-bottom: 1rem;
     }
     

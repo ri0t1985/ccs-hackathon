@@ -9,12 +9,12 @@ main {
 }
 
 .sidebar {
-    background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
+    background-image: linear-gradient(180deg, var(--color-primary, #1e3a5f) 0%, var(--color-secondary, #ff6b35) 70%);
 }
 
 .top-row {
     background-color: #f7f7f7;
-    border-bottom: 1px solid #d6d5d5;
+    border-bottom: 1px solid rgba(30, 58, 95, 0.2);
     justify-content: flex-end;
     height: 3.5rem;
     display: flex;
@@ -29,6 +29,11 @@ main {
 
     .top-row ::deep a:hover, .top-row ::deep .btn-link:hover {
         text-decoration: underline;
+        color: var(--color-link-hover, #ff6b35);
+    }
+    
+    .top-row ::deep a, .top-row ::deep .btn-link {
+        color: var(--color-link, #1e3a5f);
     }
 
     .top-row ::deep a:first-child {

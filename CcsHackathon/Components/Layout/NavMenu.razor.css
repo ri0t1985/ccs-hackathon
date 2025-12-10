@@ -17,11 +17,32 @@
 
 .top-row {
     min-height: 3.5rem;
-    background-color: rgba(0,0,0,0.4);
+    background-color: var(--color-primary, #1e3a5f);
 }
 
 .navbar-brand {
     font-size: 1.1rem;
+}
+
+.logo-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    padding: 0.5rem 0;
+}
+
+.logo-img {
+    height: 40px;
+    width: auto;
+    max-width: 200px;
+    object-fit: contain;
+}
+
+@media (max-width: 640.98px) {
+    .logo-img {
+        height: 32px;
+        max-width: 150px;
+    }
 }
 
 .bi {
