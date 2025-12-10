@@ -1,7 +1,10 @@
 @page "/board-games"
 @using CcsHackathon.Services
+@using CcsHackathon.Data
 @attribute [Authorize]
 @inject IBoardGameOverviewService BoardGameOverviewService
+@inject ISessionService SessionService
+@inject IUserContext UserContext
 @inject ILogger<BoardGameOverview> Logger
 
 <PageTitle>Board Games Overview</PageTitle>
@@ -9,6 +12,22 @@
 <div class="container mt-4">
     <h2>Registered Board Games</h2>
     <p class="text-muted">Overview of all board games that have been registered</p>
+    
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <label for="sessionFilter" class="form-label">Filter by Session</label>
+            <InputSelect id="sessionFilter" class="form-select" @bind-Value="selectedSessionId" @onchange="OnSessionFilterChanged">
+                <option value="">-- All Sessions --</option>
+                @if (sessions != null)
+                {
+                    @foreach (var session in sessions)
+                    {
+                        <option value="@session.Id">@session.Date.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</option>
+                    }
+                }
+            </InputSelect>
+        </div>
+    </div>
     
     @if (games == null)
     {
@@ -57,11 +76,15 @@
                         </th>
                         <th>Setup Time</th>
                         <th>AI Data</th>
+                        <th>Participants</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var game in sortedGames)
                     {
+                        var participantCount = participantCounts.ContainsKey(game.GameName) ? participantCounts[game.GameName] : 0;
+                        var isParticipant = participantStatus.ContainsKey(game.GameName) && participantStatus[game.GameName];
                         <tr>
                             <td><strong>@game.GameName</strong></td>
                             <td>
@@ -106,6 +129,41 @@
                                     <span class="badge bg-secondary">Pending</span>
                                 }
                             </td>
+                            <td>
+                                @if (selectedSessionId.HasValue)
+                                {
+                                    <span class="badge bg-info">@participantCount</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (selectedSessionId.HasValue)
+                                {
+                                    @if (isParticipant)
+                                    {
+                                        <button class="btn btn-sm btn-outline-danger" 
+                                                @onclick="() => RemoveParticipant(game.GameName)"
+                                                title="Remove interest">
+                                            ❌ Not Interested
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-primary" 
+                                                @onclick="() => AddParticipant(game.GameName)"
+                                                title="Express interest">
+                                            👍 I want to play this
+                                        </button>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">Select a session</span>
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>
@@ -123,19 +181,117 @@
     private IEnumerable<BoardGameOverviewItem> sortedGames = Enumerable.Empty<BoardGameOverviewItem>();
     private string sortColumn = nameof(BoardGameOverviewItem.GameName);
     private bool sortAscending = true;
+    private List<Session>? sessions;
+    private Guid? selectedSessionId;
+    private Dictionary<string, int> participantCounts = new();
+    private Dictionary<string, bool> participantStatus = new();
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            games = await BoardGameOverviewService.GetBoardGamesAsync();
-            ApplySorting();
+            sessions = (await SessionService.GetAllSessionsAsync()).ToList();
+            await LoadGamesAsync();
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading board games overview");
             games = Enumerable.Empty<BoardGameOverviewItem>();
             sortedGames = Enumerable.Empty<BoardGameOverviewItem>();
+        }
+    }
+
+    private async Task LoadGamesAsync()
+    {
+        try
+        {
+            games = await BoardGameOverviewService.GetBoardGamesAsync(selectedSessionId);
+            ApplySorting();
+            
+            if (selectedSessionId.HasValue)
+            {
+                await LoadParticipantDataAsync();
+            }
+            else
+            {
+                participantCounts.Clear();
+                participantStatus.Clear();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading games");
+        }
+    }
+
+    private async Task LoadParticipantDataAsync()
+    {
+        if (!selectedSessionId.HasValue || games == null) return;
+
+        participantCounts.Clear();
+        participantStatus.Clear();
+
+        foreach (var game in games)
+        {
+            var count = await SessionService.GetParticipantCountAsync(selectedSessionId.Value, game.GameName);
+            participantCounts[game.GameName] = count;
+            
+            var isParticipant = await SessionService.IsParticipantAsync(selectedSessionId.Value, game.GameName, UserContext.UserId);
+            participantStatus[game.GameName] = isParticipant;
+        }
+    }
+
+    private async Task OnSessionFilterChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        selectedSessionId = string.IsNullOrWhiteSpace(value) ? null : Guid.Parse(value);
+        await LoadGamesAsync();
+    }
+
+    private async Task AddParticipant(string gameName)
+    {
+        if (!selectedSessionId.HasValue) return;
+
+        try
+        {
+            var success = await SessionService.AddParticipantAsync(
+                selectedSessionId.Value,
+                gameName,
+                UserContext.UserId,
+                UserContext.DisplayName
+            );
+
+            if (success)
+            {
+                await LoadParticipantDataAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error adding participant");
+        }
+    }
+
+    private async Task RemoveParticipant(string gameName)
+    {
+        if (!selectedSessionId.HasValue) return;
+
+        try
+        {
+            var success = await SessionService.RemoveParticipantAsync(
+                selectedSessionId.Value,
+                gameName,
+                UserContext.UserId
+            );
+
+            if (success)
+            {
+                await LoadParticipantDataAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error removing participant");
         }
     }
 

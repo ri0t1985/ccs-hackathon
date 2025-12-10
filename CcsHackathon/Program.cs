@@ -93,6 +93,8 @@ else
 builder.Services.AddScoped<IAgentOrchestrator, AgentOrchestrator>();
 builder.Services.AddScoped<IRegistrationService, RegistrationService>();
 builder.Services.AddScoped<IBoardGameAiService, BoardGameAiService>();
+builder.Services.AddScoped<ISessionService, SessionService>();
+builder.Services.AddScoped<IBoardGameOverviewService, BoardGameOverviewService>();
 builder.Services.AddScoped<IBoardGameOverviewService, BoardGameOverviewService>();
 
 // Register background service for AI data processing

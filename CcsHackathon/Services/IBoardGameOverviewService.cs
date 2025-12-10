@@ -4,7 +4,7 @@ namespace CcsHackathon.Services;
 
 public interface IBoardGameOverviewService
 {
-    Task<IEnumerable<BoardGameOverviewItem>> GetBoardGamesAsync();
+    Task<IEnumerable<BoardGameOverviewItem>> GetBoardGamesAsync(Guid? sessionId = null);
 }
 
 public record BoardGameOverviewItem
