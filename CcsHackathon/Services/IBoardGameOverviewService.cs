@@ -9,6 +9,7 @@ public interface IBoardGameOverviewService
 
 public record BoardGameOverviewItem
 {
+    public Guid BoardGameId { get; init; }
     public string GameName { get; init; } = string.Empty;
     public string? Summary { get; init; }
     public decimal? Complexity { get; init; }

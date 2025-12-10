@@ -95,6 +95,7 @@ builder.Services.AddScoped<IRegistrationService, RegistrationService>();
 builder.Services.AddScoped<IBoardGameAiService, BoardGameAiService>();
 builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<IBoardGameOverviewService, BoardGameOverviewService>();
+builder.Services.AddScoped<IBoardGameFaqService, BoardGameFaqService>();
 
 // Register background service for AI data processing
 builder.Services.AddHostedService<BoardGameAiBackgroundService>();
@@ -149,6 +150,9 @@ using (var scope = app.Services.CreateScope())
                 await dbContext.BoardGameCaches.CountAsync();
                 await dbContext.BoardGames.CountAsync();
                 await dbContext.Sessions.CountAsync();
+                await dbContext.BoardGameFaqCaches.CountAsync();
+                await dbContext.BoardGameConversations.CountAsync();
+                await dbContext.BoardGameConversationMessages.CountAsync();
                 
                 // Try to access a newer column to ensure it exists
                 // If FoodRequirements or AI fields don't exist, this will fail
