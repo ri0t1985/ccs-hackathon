@@ -14,9 +14,9 @@
     
     <div class="row mb-3">
         <div class="col-md-4">
-            <label for="sessionFilter" class="form-label">Filter by Session</label>
+            <label for="sessionFilter" class="form-label">Select Session <span class="text-danger">*</span></label>
             <InputSelect id="sessionFilter" class="form-select" @bind-Value="selectedSessionId" @onchange="OnSessionFilterChanged">
-                <option value="">-- All Sessions --</option>
+                <option value="">-- Select a session --</option>
                 @if (sessions != null)
                 {
                     @foreach (var session in sessions)
@@ -25,10 +25,17 @@
                     }
                 }
             </InputSelect>
+            <small class="form-text text-muted">Only games registered for the selected session will be shown</small>
         </div>
     </div>
     
-    @if (games == null)
+    @if (!selectedSessionId.HasValue)
+    {
+        <div class="alert alert-warning" role="alert">
+            <strong>Please select a session</strong> to view board games registered for that session.
+        </div>
+    }
+    else if (games == null)
     {
         <div class="text-center py-5">
             <div class="spinner-border" role="status">
@@ -40,8 +47,8 @@
     else if (!games.Any())
     {
         <div class="alert alert-info" role="alert">
-            <strong>No games registered yet.</strong> 
-            <a href="/register-game" class="alert-link">Register a game</a> to get started.
+            <strong>No games registered for this session.</strong> 
+            <a href="/register-game" class="alert-link">Register a game</a> for this session to get started.
         </div>
     }
     else
@@ -196,7 +203,9 @@
         try
         {
             sessions = (await SessionService.GetAllSessionsAsync()).ToList();
-            await LoadGamesAsync();
+            // Don't load games until a session is selected
+            games = Enumerable.Empty<BoardGameOverviewItem>();
+            sortedGames = Enumerable.Empty<BoardGameOverviewItem>();
         }
         catch (Exception ex)
         {
@@ -208,9 +217,17 @@
 
     private async Task LoadGamesAsync()
     {
+        if (!selectedSessionId.HasValue)
+        {
+            games = Enumerable.Empty<BoardGameOverviewItem>();
+            sortedGames = Enumerable.Empty<BoardGameOverviewItem>();
+            StateHasChanged();
+            return;
+        }
+
         try
         {
-            // Fetch all games data
+            // Fetch games data for the selected session only
             games = await BoardGameOverviewService.GetBoardGamesAsync(selectedSessionId);
             ApplySorting();
             
@@ -219,7 +236,9 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error loading games");
+            Logger.LogError(ex, "Error loading games for session {SessionId}", selectedSessionId);
+            games = Enumerable.Empty<BoardGameOverviewItem>();
+            sortedGames = Enumerable.Empty<BoardGameOverviewItem>();
             StateHasChanged();
         }
     }
@@ -229,8 +248,23 @@
         var value = e.Value?.ToString();
         selectedSessionId = string.IsNullOrWhiteSpace(value) ? null : Guid.Parse(value);
         
-        // Load all data (games + participant data) in a single call
-        await LoadGamesAsync();
+        // Clear current games list immediately to prevent stale data
+        games = null;
+        sortedGames = Enumerable.Empty<BoardGameOverviewItem>();
+        StateHasChanged();
+        
+        // Load games for the selected session
+        if (selectedSessionId.HasValue)
+        {
+            await LoadGamesAsync();
+        }
+        else
+        {
+            // No session selected, clear the list
+            games = Enumerable.Empty<BoardGameOverviewItem>();
+            sortedGames = Enumerable.Empty<BoardGameOverviewItem>();
+            StateHasChanged();
+        }
     }
 
     private void ShowDescriptionModal(BoardGameOverviewItem game)

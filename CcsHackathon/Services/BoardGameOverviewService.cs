@@ -14,17 +14,18 @@ public class BoardGameOverviewService : IBoardGameOverviewService
 
     public async Task<IEnumerable<BoardGameOverviewItem>> GetBoardGamesAsync(Guid? sessionId = null)
     {
-        // Get all unique board games from GameRegistrations (including those without AI data)
+        // Require sessionId - only return games for a specific session
+        if (!sessionId.HasValue)
+        {
+            return Enumerable.Empty<BoardGameOverviewItem>();
+        }
+
+        // Get board games from GameRegistrations that are registered for the specified session
         IQueryable<GameRegistration> gameRegistrationsQuery = _dbContext.GameRegistrations
             .Include(gr => gr.Registration)
             .Include(gr => gr.BoardGame)
-            .Include(gr => gr.BoardGameCache);
-
-        // If sessionId is provided, filter games that are registered for that session
-        if (sessionId.HasValue)
-        {
-            gameRegistrationsQuery = gameRegistrationsQuery.Where(gr => gr.Registration.SessionId == sessionId.Value);
-        }
+            .Include(gr => gr.BoardGameCache)
+            .Where(gr => gr.Registration.SessionId == sessionId.Value);
 
         var gameRegistrations = await gameRegistrationsQuery.ToListAsync();
 
