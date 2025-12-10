@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 @using CcsHackathon.Services
 @inject NavigationManager Navigation
 @inject IUserContext UserContext
@@ -7,10 +7,10 @@
 @code {
     protected override void OnInitialized()
     {
-        // Redirect to dashboard if authenticated, otherwise to login
+        // Redirect based on authentication status
         if (UserContext.IsAuthenticated)
         {
-            Navigation.NavigateTo("/dashboard", forceLoad: true);
+            Navigation.NavigateTo("/register-game", forceLoad: true);
         }
         else
         {
@@ -18,3 +18,4 @@
         }
     }
 }
+
