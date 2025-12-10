@@ -28,14 +28,6 @@
                     <ValidationMessage For="@(() => sessionModel.Date)" />
                 </div>
                 
-                <div class="mb-3">
-                    <label for="sessionTime" class="form-label">Time</label>
-                    <InputTime TValue="TimeOnly" id="sessionTime" class="form-control" 
-                               Value="sessionModel.Time" 
-                               ValueChanged="@((TimeOnly value) => sessionModel.Time = value)"
-                               ValueExpression="@(() => sessionModel.Time)" />
-                </div>
-                
                 <button type="submit" class="btn btn-primary" disabled="@isCreating">
                     @if (isCreating)
                     {
@@ -74,7 +66,7 @@
                     {
                         <div class="list-group-item">
                             <div class="d-flex w-100 justify-content-between">
-                                <h5 class="mb-1">@session.Date.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</h5>
+                                <h5 class="mb-1">@session.Date.ToString("yyyy-MM-dd")</h5>
                                 <div>
                                     <button class="btn btn-sm btn-outline-secondary me-2" 
                                             @onclick="() => EditSession(session)"
@@ -117,14 +109,6 @@
                                            ValueChanged="@((DateOnly value) => editSessionModel.Date = value)"
                                            ValueExpression="@(() => editSessionModel.Date)" />
                                 <ValidationMessage For="@(() => editSessionModel.Date)" />
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="editSessionTime" class="form-label">New Time</label>
-                                <InputTime TValue="TimeOnly" id="editSessionTime" class="form-control" 
-                                           Value="editSessionModel.Time" 
-                                           ValueChanged="@((TimeOnly value) => editSessionModel.Time = value)"
-                                           ValueExpression="@(() => editSessionModel.Time)" />
                             </div>
                             
                             <div class="d-flex justify-content-end">
@@ -181,8 +165,7 @@
 
         try
         {
-            var dateTime = sessionModel.Date.ToDateTime(sessionModel.Time);
-            await SessionService.CreateSessionAsync(dateTime);
+            await SessionService.CreateSessionAsync(sessionModel.Date);
             
             createMessage = "Session created successfully!";
             sessionModel = new SessionModel();
@@ -203,11 +186,9 @@
     private void EditSession(Session session)
     {
         editingSession = session;
-        var localDate = session.Date.ToLocalTime();
         editSessionModel = new SessionModel
         {
-            Date = DateOnly.FromDateTime(localDate),
-            Time = TimeOnly.FromDateTime(localDate)
+            Date = session.Date
         };
     }
 
@@ -224,8 +205,7 @@
         isUpdating = true;
         try
         {
-            var dateTime = editSessionModel.Date.ToDateTime(editSessionModel.Time);
-            await SessionService.UpdateSessionDateAsync(editingSession.Id, dateTime);
+            await SessionService.UpdateSessionDateAsync(editingSession.Id, editSessionModel.Date);
             
             editingSession = null;
             editSessionModel = null;
@@ -258,8 +238,6 @@
     {
         [Required(ErrorMessage = "Date is required")]
         public DateOnly Date { get; set; } = DateOnly.FromDateTime(DateTime.Today);
-
-        public TimeOnly Time { get; set; } = TimeOnly.FromDateTime(DateTime.Now);
     }
 }
 

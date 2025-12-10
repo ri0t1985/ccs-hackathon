@@ -77,7 +77,7 @@
                                         {
                                             @foreach (var session in upcomingSessions)
                                             {
-                                                <option value="@session.Id">@session.Date.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</option>
+                                                <option value="@session.Id">@session.Date.ToString("yyyy-MM-dd")</option>
                                             }
                                         }
                                     </InputSelect>
@@ -147,9 +147,9 @@
         try
         {
             var allSessions = await SessionService.GetAllSessionsAsync();
-            var now = DateTime.UtcNow;
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
             upcomingSessions = allSessions
-                .Where(s => !s.IsCancelled && s.Date >= now)
+                .Where(s => !s.IsCancelled && s.Date >= today)
                 .OrderBy(s => s.Date)
                 .ToList();
         }
@@ -178,7 +178,8 @@
         if (registrationModel.SessionId.HasValue)
         {
             var selectedSession = upcomingSessions?.FirstOrDefault(s => s.Id == registrationModel.SessionId.Value);
-            if (selectedSession == null || selectedSession.Date < DateTime.UtcNow)
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            if (selectedSession == null || selectedSession.Date < today)
                 return false;
         }
         
@@ -222,6 +223,7 @@
             }
             
             var selectedSession = upcomingSessions?.FirstOrDefault(s => s.Id == registrationModel.SessionId.Value);
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
             if (selectedSession == null)
             {
                 message = "The selected session is invalid or has passed. Please select a valid upcoming session.";
@@ -230,7 +232,7 @@
                 return;
             }
             
-            if (selectedSession.Date < DateTime.UtcNow)
+            if (selectedSession.Date < today)
             {
                 message = "Cannot register for a past session. Please select an upcoming session.";
                 isError = true;

@@ -22,7 +22,7 @@
                 {
                     @foreach (var session in sessions)
                     {
-                        <option value="@session.Id">@session.Date.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</option>
+                        <option value="@session.Id">@session.Date.ToString("yyyy-MM-dd")</option>
                     }
                 }
             </InputSelect>
