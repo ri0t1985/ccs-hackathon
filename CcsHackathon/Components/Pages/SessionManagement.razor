@@ -21,13 +21,19 @@
                 
                 <div class="mb-3">
                     <label for="sessionDate" class="form-label">Session Date</label>
-                    <InputDate TValue="DateOnly" id="sessionDate" class="form-control" @bind="sessionModel.Date" />
+                    <InputDate TValue="DateOnly" id="sessionDate" class="form-control" 
+                               Value="sessionModel.Date" 
+                               ValueChanged="@((DateOnly value) => sessionModel.Date = value)"
+                               ValueExpression="@(() => sessionModel.Date)" />
                     <ValidationMessage For="@(() => sessionModel.Date)" />
                 </div>
                 
                 <div class="mb-3">
                     <label for="sessionTime" class="form-label">Time</label>
-                    <InputTime TValue="TimeOnly" id="sessionTime" class="form-control" @bind="sessionModel.Time" />
+                    <InputTime TValue="TimeOnly" id="sessionTime" class="form-control" 
+                               Value="sessionModel.Time" 
+                               ValueChanged="@((TimeOnly value) => sessionModel.Time = value)"
+                               ValueExpression="@(() => sessionModel.Time)" />
                 </div>
                 
                 <button type="submit" class="btn btn-primary" disabled="@isCreating">
@@ -106,13 +112,19 @@
                             
                             <div class="mb-3">
                                 <label for="editSessionDate" class="form-label">New Date</label>
-                                <InputDate TValue="DateOnly" id="editSessionDate" class="form-control" @bind="editSessionModel.Date" />
+                                <InputDate TValue="DateOnly" id="editSessionDate" class="form-control" 
+                                           Value="editSessionModel.Date" 
+                                           ValueChanged="@((DateOnly value) => editSessionModel.Date = value)"
+                                           ValueExpression="@(() => editSessionModel.Date)" />
                                 <ValidationMessage For="@(() => editSessionModel.Date)" />
                             </div>
                             
                             <div class="mb-3">
                                 <label for="editSessionTime" class="form-label">New Time</label>
-                                <InputTime TValue="TimeOnly" id="editSessionTime" class="form-control" @bind="editSessionModel.Time" />
+                                <InputTime TValue="TimeOnly" id="editSessionTime" class="form-control" 
+                                           Value="editSessionModel.Time" 
+                                           ValueChanged="@((TimeOnly value) => editSessionModel.Time = value)"
+                                           ValueExpression="@(() => editSessionModel.Time)" />
                             </div>
                             
                             <div class="d-flex justify-content-end">
