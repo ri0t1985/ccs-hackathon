@@ -133,22 +133,10 @@
                                             View Description
                                         </button>
                                     }
-                                    <div class="btn-group" role="group">
-                                        <button type="button" class="btn btn-sm btn-outline-info dropdown-toggle" 
-                                                data-bs-toggle="dropdown" aria-expanded="false">
-                                            Ask Question
-                                        </button>
-                                        <ul class="dropdown-menu">
-                                            @foreach (var question in commonQuestions)
-                                            {
-                                                <li>
-                                                    <a class="dropdown-item" href="#" @onclick="() => AskQuestion(game, question)" @onclick:preventDefault="true">
-                                                        @question
-                                                    </a>
-                                                </li>
-                                            }
-                                        </ul>
-                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-info" 
+                                            @onclick="() => ShowQuestionSelector(game)">
+                                        Ask Question
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -201,6 +189,50 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseDescriptionModal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@* Question Selector Modal *@
+@if (selectedGameForQuestionSelector != null)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Ask a Question: @selectedGameForQuestionSelector.GameName</h5>
+                    <button type="button" class="btn-close" @onclick="CloseQuestionSelector" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select a common question:</label>
+                        <div class="list-group">
+                            @foreach (var question in commonQuestions)
+                            {
+                                <button type="button" class="list-group-item list-group-item-action" 
+                                        @onclick="() => SelectQuestion(question)">
+                                    @question
+                                </button>
+                            }
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Or type your own question:</label>
+                        <input type="text" class="form-control" @bind="customQuestion" 
+                               placeholder="Enter your question..." 
+                               @onkeypress="OnCustomQuestionKeyPress" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseQuestionSelector">Cancel</button>
+                    <button type="button" class="btn btn-primary" 
+                            @onclick="() => SelectQuestion(customQuestion)" 
+                            disabled="@string.IsNullOrWhiteSpace(customQuestion)">
+                        Ask Question
+                    </button>
                 </div>
             </div>
         </div>
@@ -282,9 +314,11 @@
     
     // FAQ state
     private BoardGameOverviewItem? selectedGameForFaq;
+    private BoardGameOverviewItem? selectedGameForQuestionSelector;
     private List<BoardGameConversationMessage>? faqConversation;
     private Guid? currentConversationId;
     private string followUpQuestion = string.Empty;
+    private string customQuestion = string.Empty;
     private bool isLoadingFaqResponse = false;
     private List<string> commonQuestions = new();
 
@@ -377,6 +411,35 @@
     private void CloseDescriptionModal()
     {
         selectedGameForDescription = null;
+    }
+
+    private void ShowQuestionSelector(BoardGameOverviewItem game)
+    {
+        selectedGameForQuestionSelector = game;
+        customQuestion = string.Empty;
+    }
+
+    private void CloseQuestionSelector()
+    {
+        selectedGameForQuestionSelector = null;
+        customQuestion = string.Empty;
+    }
+
+    private async Task SelectQuestion(string question)
+    {
+        if (string.IsNullOrWhiteSpace(question) || selectedGameForQuestionSelector == null)
+            return;
+
+        CloseQuestionSelector();
+        await AskQuestion(selectedGameForQuestionSelector, question);
+    }
+
+    private async Task OnCustomQuestionKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(customQuestion))
+        {
+            await SelectQuestion(customQuestion);
+        }
     }
 
     private void SortBy(string column)
