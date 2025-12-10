@@ -102,7 +102,10 @@
                 </div>
                 
                 <div class="d-grid gap-2 mt-4">
-                    <button type="submit" class="btn btn-primary btn-lg" disabled="@(isSubmitting || !IsFormValid())">
+                    <button type="submit" 
+                            class="btn @(IsFormValid() ? "btn-primary" : "btn-secondary") btn-lg" 
+                            disabled="@(isSubmitting || !IsFormValid())"
+                            style="@(!IsFormValid() ? "opacity: 0.6; cursor: not-allowed;" : "")">
                         @if (isSubmitting)
                         {
                             <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
