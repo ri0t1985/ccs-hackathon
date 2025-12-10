@@ -147,6 +147,7 @@ using (var scope = app.Services.CreateScope())
                 await dbContext.Registrations.CountAsync();
                 await dbContext.GameRegistrations.CountAsync();
                 await dbContext.BoardGameCaches.CountAsync();
+                await dbContext.BoardGames.CountAsync();
                 await dbContext.Sessions.CountAsync();
                 
                 // Try to access a newer column to ensure it exists
@@ -156,8 +157,15 @@ using (var scope = app.Services.CreateScope())
                     .FirstOrDefaultAsync();
                 
                 var testAiQuery = await dbContext.BoardGameCaches
-                    .Select(b => new { b.Id, b.Complexity, b.TimeToSetupMinutes, b.Summary, b.HasAiData })
+                    .Select(b => new { b.Id, b.Complexity, b.TimeToSetupMinutes, b.Summary, b.HasAiData, b.BoardGameId })
                     .FirstOrDefaultAsync();
+                
+                var testBoardGameQuery = await dbContext.BoardGames
+                    .Select(bg => new { bg.Id, bg.Name, bg.Description, bg.SetupComplexity, bg.Score })
+                    .FirstOrDefaultAsync();
+                
+                // Check if migration from GameId to BoardGameId is needed
+                await MigrateGameIdToBoardGameIdAsync(dbContext, logger);
                 
                 logger.LogInformation("Database schema is compatible with current model");
             }
@@ -192,6 +200,30 @@ using (var scope = app.Services.CreateScope())
             logger.LogError(recreateEx, "Failed to recreate database");
             throw;
         }
+    }
+}
+
+// Data migration: Ensure BoardGames exist for all GameRegistrations
+// This handles the case where the database was recreated but GameRegistrations reference BoardGames
+async Task MigrateGameIdToBoardGameIdAsync(ApplicationDbContext dbContext, ILogger logger)
+{
+    try
+    {
+        // Get all GameRegistrations that might not have a valid BoardGame reference
+        var gameRegistrationsWithoutBoardGame = await dbContext.GameRegistrations
+            .Where(gr => !dbContext.BoardGames.Any(bg => bg.Id == gr.BoardGameId))
+            .ToListAsync();
+
+        if (gameRegistrationsWithoutBoardGame.Any())
+        {
+            logger.LogWarning("Found {Count} GameRegistrations with invalid BoardGameId references. These will need to be fixed manually or the database should be recreated.", 
+                gameRegistrationsWithoutBoardGame.Count);
+        }
+    }
+    catch (Exception ex)
+    {
+        // Migration check is optional
+        logger.LogDebug(ex, "Migration check encountered an issue (this is expected during database recreation)");
     }
 }
 

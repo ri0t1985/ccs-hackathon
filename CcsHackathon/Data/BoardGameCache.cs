@@ -4,7 +4,7 @@ public class BoardGameCache
 {
     public Guid Id { get; set; }
     public Guid GameRegistrationId { get; set; }
-    public string GameName { get; set; } = string.Empty;
+    public Guid BoardGameId { get; set; }
     public string? ExternalId { get; set; }
     public string? RulesText { get; set; }
     public DateTime LastUpdatedAt { get; set; }
@@ -17,4 +17,7 @@ public class BoardGameCache
     
     // Navigation property for one-to-one relationship with GameRegistration
     public GameRegistration GameRegistration { get; set; } = null!;
+    
+    // Navigation property for many-to-one relationship with BoardGame
+    public BoardGame BoardGame { get; set; } = null!;
 }

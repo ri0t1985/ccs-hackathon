@@ -50,8 +50,9 @@ public class BoardGameAiBackgroundService : BackgroundService
         try
         {
             // Find games that need AI data
-            // Look for GameRegistrations where the game name doesn't have AI data yet
+            // Look for GameRegistrations where the game doesn't have AI data yet
             var gamesNeedingData = await dbContext.GameRegistrations
+                .Include(gr => gr.BoardGame)
                 .Include(gr => gr.BoardGameCache)
                 .Where(gr => 
                     gr.BoardGameCache == null || 
@@ -60,7 +61,8 @@ public class BoardGameAiBackgroundService : BackgroundService
                 .Select(gr => new
                 {
                     GameRegistrationId = gr.Id,
-                    GameName = gr.GameId,
+                    BoardGameId = gr.BoardGameId,
+                    GameName = gr.BoardGame.Name,
                     BoardGameCache = gr.BoardGameCache
                 })
                 .ToListAsync(cancellationToken);
@@ -78,7 +80,7 @@ public class BoardGameAiBackgroundService : BackgroundService
                 if (cancellationToken.IsCancellationRequested)
                     break;
 
-                await ProcessGameAsync(dbContext, aiService, game.GameRegistrationId, game.GameName, game.BoardGameCache, cancellationToken);
+                await ProcessGameAsync(dbContext, aiService, game.GameRegistrationId, game.BoardGameId, game.GameName, game.BoardGameCache, cancellationToken);
             }
         }
         catch (Exception ex)
@@ -91,6 +93,7 @@ public class BoardGameAiBackgroundService : BackgroundService
         ApplicationDbContext dbContext,
         IBoardGameAiService aiService,
         Guid gameRegistrationId,
+        Guid boardGameId,
         string gameName,
         BoardGameCache? existingCache,
         CancellationToken cancellationToken)
@@ -139,28 +142,38 @@ public class BoardGameAiBackgroundService : BackgroundService
 
         try
         {
+            // Update BoardGame entity with AI data
+            var boardGame = await dbContext.BoardGames.FindAsync(new object[] { boardGameId }, cancellationToken);
+            if (boardGame != null)
+            {
+                boardGame.SetupComplexity = aiData.Complexity;
+                boardGame.Score = aiData.Complexity; // Using Complexity as Score for now
+                boardGame.Description = aiData.Summary;
+                boardGame.LastUpdatedAt = DateTime.UtcNow;
+            }
+
             // Update or create BoardGameCache
             if (existingCache == null)
             {
-                // Check if a cache exists by game name (unique constraint)
-                var existingByName = await dbContext.BoardGameCaches
-                    .FirstOrDefaultAsync(c => c.GameName == gameName, cancellationToken);
+                // Check if a cache exists for this BoardGameId
+                var existingByBoardGameId = await dbContext.BoardGameCaches
+                    .FirstOrDefaultAsync(c => c.BoardGameId == boardGameId, cancellationToken);
 
-                if (existingByName != null)
+                if (existingByBoardGameId != null)
                 {
                     // Update existing cache
-                    existingByName.Complexity = aiData.Complexity;
-                    existingByName.TimeToSetupMinutes = aiData.TimeToSetupMinutes;
-                    existingByName.Summary = aiData.Summary;
-                    existingByName.HasAiData = true;
-                    existingByName.LastUpdatedAt = DateTime.UtcNow;
+                    existingByBoardGameId.Complexity = aiData.Complexity;
+                    existingByBoardGameId.TimeToSetupMinutes = aiData.TimeToSetupMinutes;
+                    existingByBoardGameId.Summary = aiData.Summary;
+                    existingByBoardGameId.HasAiData = true;
+                    existingByBoardGameId.LastUpdatedAt = DateTime.UtcNow;
                     
                     // Update the GameRegistration to point to this cache
                     var gameReg = await dbContext.GameRegistrations
                         .FirstOrDefaultAsync(gr => gr.Id == gameRegistrationId, cancellationToken);
                     if (gameReg != null)
                     {
-                        gameReg.BoardGameCache = existingByName;
+                        gameReg.BoardGameCache = existingByBoardGameId;
                     }
                 }
                 else
@@ -170,7 +183,7 @@ public class BoardGameAiBackgroundService : BackgroundService
                     {
                         Id = Guid.NewGuid(),
                         GameRegistrationId = gameRegistrationId,
-                        GameName = gameName,
+                        BoardGameId = boardGameId,
                         Complexity = aiData.Complexity,
                         TimeToSetupMinutes = aiData.TimeToSetupMinutes,
                         Summary = aiData.Summary,

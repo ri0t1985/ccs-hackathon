@@ -12,6 +12,7 @@ public class ApplicationDbContext : DbContext
         public DbSet<Registration> Registrations { get; set; }
         public DbSet<GameRegistration> GameRegistrations { get; set; }
         public DbSet<BoardGameCache> BoardGameCaches { get; set; }
+        public DbSet<BoardGame> BoardGames { get; set; }
         public DbSet<Session> Sessions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -51,17 +52,38 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.SetNull); // Don't cascade delete sessions when registration is deleted
         });
 
+        // Configure BoardGame entity
+        modelBuilder.Entity<BoardGame>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired();
+            entity.Property(e => e.Description).IsRequired(false);
+            entity.Property(e => e.SetupComplexity).HasPrecision(5, 2);
+            entity.Property(e => e.Score).HasPrecision(5, 2);
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.LastUpdatedAt).IsRequired(false);
+
+            // Ensure unique constraint on Name
+            entity.HasIndex(e => e.Name).IsUnique();
+        });
+
         // Configure GameRegistration entity
         modelBuilder.Entity<GameRegistration>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.GameId).IsRequired();
+            entity.Property(e => e.BoardGameId).IsRequired();
 
             // Configure one-to-many relationship: Registration -> GameRegistration
             entity.HasOne(e => e.Registration)
                 .WithMany(r => r.GameRegistrations)
                 .HasForeignKey(e => e.RegistrationId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure many-to-one relationship: GameRegistration -> BoardGame
+            entity.HasOne(e => e.BoardGame)
+                .WithMany(bg => bg.GameRegistrations)
+                .HasForeignKey(e => e.BoardGameId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent deleting board games that are referenced
 
             // Configure one-to-one relationship: GameRegistration -> BoardGameCache
             entity.HasOne(e => e.BoardGameCache)
@@ -75,14 +97,17 @@ public class ApplicationDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.GameRegistrationId).IsRequired();
-            entity.Property(e => e.GameName).IsRequired();
+            entity.Property(e => e.BoardGameId).IsRequired();
             entity.Property(e => e.LastUpdatedAt).IsRequired();
             entity.Property(e => e.HasAiData).IsRequired();
             entity.Property(e => e.Complexity).HasPrecision(5, 2);
             entity.Property(e => e.TimeToSetupMinutes).IsRequired(false);
 
-            // Configure unique constraint on GameName
-            entity.HasIndex(e => e.GameName).IsUnique();
+            // Configure many-to-one relationship: BoardGameCache -> BoardGame
+            entity.HasOne(e => e.BoardGame)
+                .WithMany(bg => bg.BoardGameCaches)
+                .HasForeignKey(e => e.BoardGameId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent deleting board games that are referenced
         });
     }
 }
