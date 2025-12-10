@@ -83,8 +83,6 @@
                 <tbody>
                     @foreach (var game in sortedGames)
                     {
-                        var participantCount = participantCounts.ContainsKey(game.GameName) ? participantCounts[game.GameName] : 0;
-                        var isParticipant = participantStatus.ContainsKey(game.GameName) && participantStatus[game.GameName];
                         <tr>
                             <td><strong>@game.GameName</strong></td>
                             <td>
@@ -152,7 +150,7 @@
                             <td>
                                 @if (selectedSessionId.HasValue)
                                 {
-                                    <span class="badge bg-info">@participantCount</span>
+                                    <span class="badge bg-info">@game.ParticipantCount</span>
                                 }
                                 else
                                 {
@@ -162,7 +160,7 @@
                             <td>
                                 @if (selectedSessionId.HasValue)
                                 {
-                                    @if (isParticipant)
+                                    @if (game.IsUserParticipating)
                                     {
                                         <button class="btn btn-sm btn-outline-danger" 
                                                 @onclick="() => RemoveParticipant(game.GameName)"
@@ -203,8 +201,6 @@
     private bool sortAscending = true;
     private List<Session>? sessions;
     private Guid? selectedSessionId;
-    private Dictionary<string, int> participantCounts = new();
-    private Dictionary<string, bool> participantStatus = new();
     private HashSet<string> expandedDescriptions = new();
 
     protected override async Task OnInitializedAsync()
@@ -226,18 +222,9 @@
     {
         try
         {
-            games = await BoardGameOverviewService.GetBoardGamesAsync(selectedSessionId);
+            // Fetch all data in a single query (games + participant counts + user participation status)
+            games = await BoardGameOverviewService.GetBoardGamesAsync(selectedSessionId, UserContext.UserId);
             ApplySorting();
-            
-            if (selectedSessionId.HasValue && games != null)
-            {
-                await LoadParticipantDataAsync();
-            }
-            else
-            {
-                participantCounts.Clear();
-                participantStatus.Clear();
-            }
             
             // Force UI update
             StateHasChanged();
@@ -249,46 +236,13 @@
         }
     }
 
-    private async Task LoadParticipantDataAsync()
-    {
-        if (!selectedSessionId.HasValue || games == null) return;
-
-        participantCounts.Clear();
-        participantStatus.Clear();
-
-        try
-        {
-            foreach (var game in games)
-            {
-                var count = await SessionService.GetParticipantCountAsync(selectedSessionId.Value, game.GameName);
-                participantCounts[game.GameName] = count;
-                
-                var isParticipant = await SessionService.IsParticipantAsync(selectedSessionId.Value, game.GameName, UserContext.UserId);
-                participantStatus[game.GameName] = isParticipant;
-            }
-            
-            // Force UI update
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error loading participant data");
-        }
-    }
-
     private async Task OnSessionFilterChanged(ChangeEventArgs e)
     {
         var value = e.Value?.ToString();
         selectedSessionId = string.IsNullOrWhiteSpace(value) ? null : Guid.Parse(value);
         
-        // Clear participant data when session changes
-        participantCounts.Clear();
-        participantStatus.Clear();
-        
+        // Load all data (games + participant data) in a single call
         await LoadGamesAsync();
-        
-        // Force UI refresh after loading
-        StateHasChanged();
     }
 
     private async Task AddParticipant(string gameName)
@@ -306,8 +260,8 @@
 
             if (success)
             {
-                await LoadParticipantDataAsync();
-                StateHasChanged();
+                // Reload all data to get updated counts and status
+                await LoadGamesAsync();
             }
         }
         catch (Exception ex)
@@ -330,8 +284,8 @@
 
             if (success)
             {
-                await LoadParticipantDataAsync();
-                StateHasChanged();
+                // Reload all data to get updated counts and status
+                await LoadGamesAsync();
             }
         }
         catch (Exception ex)
