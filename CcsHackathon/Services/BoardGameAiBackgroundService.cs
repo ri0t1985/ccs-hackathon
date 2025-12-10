@@ -142,6 +142,16 @@ public class BoardGameAiBackgroundService : BackgroundService
 
         try
         {
+            // Update BoardGame entity with AI data
+            var boardGame = await dbContext.BoardGames.FindAsync(new object[] { boardGameId }, cancellationToken);
+            if (boardGame != null)
+            {
+                boardGame.SetupComplexity = aiData.Complexity;
+                boardGame.Score = aiData.Complexity; // Using Complexity as Score for now
+                boardGame.Description = aiData.Summary;
+                boardGame.LastUpdatedAt = DateTime.UtcNow;
+            }
+
             // Update or create BoardGameCache
             if (existingCache == null)
             {
