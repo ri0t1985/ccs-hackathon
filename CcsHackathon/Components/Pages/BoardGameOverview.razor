@@ -430,8 +430,10 @@
         if (string.IsNullOrWhiteSpace(question) || selectedGameForQuestionSelector == null)
             return;
 
+        // Capture the game reference before closing the selector
+        var game = selectedGameForQuestionSelector;
         CloseQuestionSelector();
-        await AskQuestion(selectedGameForQuestionSelector, question);
+        await AskQuestion(game, question);
     }
 
     private async Task OnCustomQuestionKeyPress(KeyboardEventArgs e)
