@@ -92,6 +92,10 @@ else
 }
 builder.Services.AddScoped<IAgentOrchestrator, AgentOrchestrator>();
 builder.Services.AddScoped<IRegistrationService, RegistrationService>();
+builder.Services.AddScoped<IBoardGameAiService, BoardGameAiService>();
+
+// Register background service for AI data processing
+builder.Services.AddHostedService<BoardGameAiBackgroundService>();
 
 // Register DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -114,11 +118,73 @@ app.UseAntiforgery();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Ensure database is created
+// Ensure database is created and matches the current model
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    dbContext.Database.EnsureCreated();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    
+    try
+    {
+        // Check if database exists
+        var databaseExists = await dbContext.Database.CanConnectAsync();
+        
+        if (databaseExists)
+        {
+            // Try to query the database to check if schema is compatible
+            // If the schema has changed (e.g., new columns added), queries will fail
+            try
+            {
+                // Attempt to query each table to verify schema compatibility
+                // This will fail if columns are missing or structure has changed
+                await dbContext.Registrations.CountAsync();
+                await dbContext.GameRegistrations.CountAsync();
+                await dbContext.BoardGameCaches.CountAsync();
+                
+                // Try to access a newer column to ensure it exists
+                // If FoodRequirements or AI fields don't exist, this will fail
+                var testQuery = await dbContext.Registrations
+                    .Select(r => new { r.Id, r.FoodRequirements })
+                    .FirstOrDefaultAsync();
+                
+                var testAiQuery = await dbContext.BoardGameCaches
+                    .Select(b => new { b.Id, b.Complexity, b.TimeToSetupMinutes, b.Summary, b.HasAiData })
+                    .FirstOrDefaultAsync();
+                
+                logger.LogInformation("Database schema is compatible with current model");
+            }
+            catch (Exception ex)
+            {
+                // Schema mismatch detected - delete and recreate
+                logger.LogWarning(ex, "Database schema mismatch detected. Deleting and recreating database...");
+                await dbContext.Database.EnsureDeletedAsync();
+                await dbContext.Database.EnsureCreatedAsync();
+                logger.LogInformation("Database recreated successfully with updated schema");
+            }
+        }
+        else
+        {
+            // Database doesn't exist, create it
+            await dbContext.Database.EnsureCreatedAsync();
+            logger.LogInformation("Database created successfully");
+        }
+    }
+    catch (Exception ex)
+    {
+        // If anything goes wrong, try to delete and recreate
+        logger.LogError(ex, "Error during database initialization. Attempting to recreate database...");
+        try
+        {
+            await dbContext.Database.EnsureDeletedAsync();
+            await dbContext.Database.EnsureCreatedAsync();
+            logger.LogInformation("Database recreated successfully after error");
+        }
+        catch (Exception recreateEx)
+        {
+            logger.LogError(recreateEx, "Failed to recreate database");
+            throw;
+        }
+    }
 }
 
 app.MapStaticAssets();
