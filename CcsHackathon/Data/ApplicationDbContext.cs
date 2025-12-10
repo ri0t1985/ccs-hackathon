@@ -53,6 +53,9 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.GameRegistrationId).IsRequired();
             entity.Property(e => e.GameName).IsRequired();
             entity.Property(e => e.LastUpdatedAt).IsRequired();
+            entity.Property(e => e.HasAiData).IsRequired();
+            entity.Property(e => e.Complexity).HasPrecision(5, 2);
+            entity.Property(e => e.TimeToSetupMinutes).IsRequired(false);
 
             // Configure unique constraint on GameName
             entity.HasIndex(e => e.GameName).IsUnique();

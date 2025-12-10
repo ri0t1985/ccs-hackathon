@@ -9,6 +9,12 @@ public class BoardGameCache
     public string? RulesText { get; set; }
     public DateTime LastUpdatedAt { get; set; }
     
+    // AI-generated fields
+    public decimal? Complexity { get; set; }
+    public int? TimeToSetupMinutes { get; set; }
+    public string? Summary { get; set; }
+    public bool HasAiData { get; set; }
+    
     // Navigation property for one-to-one relationship with GameRegistration
     public GameRegistration GameRegistration { get; set; } = null!;
 }
