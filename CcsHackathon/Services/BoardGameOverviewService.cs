@@ -21,13 +21,18 @@ public class BoardGameOverviewService : IBoardGameOverviewService
         }
 
         // Get board games from GameRegistrations that are registered for the specified session
-        IQueryable<GameRegistration> gameRegistrationsQuery = _dbContext.GameRegistrations
+        // Query: GameRegistration -> Registration -> SessionId
+        var gameRegistrations = await _dbContext.GameRegistrations
             .Include(gr => gr.Registration)
             .Include(gr => gr.BoardGame)
             .Include(gr => gr.BoardGameCache)
-            .Where(gr => gr.Registration.SessionId == sessionId.Value);
+            .Where(gr => gr.Registration.SessionId == sessionId.Value)
+            .ToListAsync();
 
-        var gameRegistrations = await gameRegistrationsQuery.ToListAsync();
+        if (!gameRegistrations.Any())
+        {
+            return Enumerable.Empty<BoardGameOverviewItem>();
+        }
 
         // Group by BoardGameId to get unique games, preferring entries with AI data
         var uniqueGames = gameRegistrations
