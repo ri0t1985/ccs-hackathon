@@ -18,80 +18,103 @@
         <div class="card-body">
             <p class="text-muted mb-4">Logged in as: <strong>@UserContext.DisplayName</strong> (@UserContext.Email)</p>
             
-            <EditForm Model="@registrationModel" OnValidSubmit="HandleValidSubmit">
+            <EditForm Model="@registrationModel" OnValidSubmit="HandleValidSubmit" OnInvalidSubmit="HandleInvalidSubmit">
                 <DataAnnotationsValidator />
+                <ValidationSummary class="alert alert-danger" />
                 
-                <div class="mb-3">
-                    <label for="name" class="form-label fw-bold">Your Name</label>
-                    <InputText id="name" class="form-control" @bind-Value="registrationModel.Name" />
-                    <ValidationMessage For="@(() => registrationModel.Name)" />
+                <div class="table-responsive">
+                    <table class="table table-borderless">
+                        <tbody>
+                            <tr>
+                                <td class="align-middle" style="width: 30%;">
+                                    <label for="name" class="form-label fw-bold mb-0">User Display Name</label>
+                                </td>
+                                <td>
+                                    <InputText id="name" class="form-control" @bind-Value="registrationModel.Name" />
+                                    <ValidationMessage For="@(() => registrationModel.Name)" />
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="align-top" style="width: 30%;">
+                                    <label class="form-label fw-bold mb-0">Board Games</label>
+                                    <p class="text-muted small mb-0">Add one or more board games</p>
+                                </td>
+                                <td>
+                                    <div class="border rounded p-3 bg-light">
+                                        @for (int i = 0; i < registrationModel.Games.Count; i++)
+                                        {
+                                            var index = i;
+                                            <div class="input-group mb-2">
+                                                <InputText class="form-control" 
+                                                           placeholder="Enter board game name" 
+                                                           @bind-Value="registrationModel.Games[index]" />
+                                                <button type="button" 
+                                                        class="btn btn-outline-danger" 
+                                                        @onclick="() => RemoveGame(index)"
+                                                        disabled="@(registrationModel.Games.Count <= 1)">
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        }
+                                        
+                                        <button type="button" 
+                                                class="btn btn-outline-secondary btn-sm" 
+                                                @onclick="AddGame">
+                                            + Add Another Game
+                                        </button>
+                                    </div>
+                                    <ValidationMessage For="@(() => registrationModel.Games)" />
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="align-middle" style="width: 30%;">
+                                    <label for="sessionId" class="form-label fw-bold mb-0">Session Date <span class="text-danger">*</span></label>
+                                </td>
+                                <td>
+                                    <InputSelect id="sessionId" class="form-select" @bind-Value="registrationModel.SessionId">
+                                        <option value="">-- Select a session --</option>
+                                        @if (upcomingSessions != null)
+                                        {
+                                            @foreach (var session in upcomingSessions)
+                                            {
+                                                <option value="@session.Id">@session.Date.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</option>
+                                            }
+                                        }
+                                    </InputSelect>
+                                    <ValidationMessage For="@(() => registrationModel.SessionId)" />
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="align-top" style="width: 30%;">
+                                    <label for="foodRequirements" class="form-label fw-bold mb-0">Food Requirements</label>
+                                    <p class="text-muted small mb-0">Optional</p>
+                                </td>
+                                <td>
+                                    <InputTextArea id="foodRequirements" 
+                                                  class="form-control" 
+                                                  rows="3"
+                                                  placeholder="Enter any dietary restrictions or food preferences..."
+                                                  @bind-Value="registrationModel.FoodRequirements" />
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
                 
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Board Games</label>
-                    <p class="text-muted small">Add one or more board games you plan to bring</p>
-                    <div class="border rounded p-3 bg-light">
-            
-                        @for (int i = 0; i < registrationModel.Games.Count; i++)
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" 
+                            class="btn @(IsFormValid() ? "btn-primary" : "btn-secondary") btn-lg" 
+                            disabled="@(isSubmitting || !IsFormValid())"
+                            style="@(!IsFormValid() ? "opacity: 0.6; cursor: not-allowed;" : "")">
+                        @if (isSubmitting)
                         {
-                            var index = i;
-                            <div class="input-group mb-2">
-                                <InputText class="form-control" 
-                                           placeholder="Enter board game name" 
-                                           @bind-Value="registrationModel.Games[index]" />
-                                <button type="button" 
-                                        class="btn btn-outline-danger" 
-                                        @onclick="() => RemoveGame(index)"
-                                        disabled="@(registrationModel.Games.Count <= 1)">
-                                    Remove
-                                </button>
-                            </div>
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <text>Registering...</text>
                         }
-                        
-                        <button type="button" 
-                                class="btn btn-outline-secondary btn-sm" 
-                                @onclick="AddGame">
-                            + Add Another Game
-                        </button>
-                        <ValidationMessage For="@(() => registrationModel.Games)" />
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="sessionId" class="form-label fw-bold">Session Date (Optional)</label>
-                    <InputSelect id="sessionId" class="form-select" @bind-Value="registrationModel.SessionId">
-                        <option value="">-- Select a session --</option>
-                        @if (sessions != null)
+                        else
                         {
-                            @foreach (var session in sessions)
-                            {
-                                <option value="@session.Id">@session.Date.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</option>
-                            }
+                            <text>Register</text>
                         }
-                    </InputSelect>
-                    <small class="form-text text-muted">Select a session date if registering for a specific game night</small>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="foodRequirements" class="form-label fw-bold">Food Requirements (Optional)</label>
-                    <InputTextArea id="foodRequirements" 
-                                  class="form-control" 
-                                  rows="3"
-                                  placeholder="Enter any dietary restrictions or food preferences..."
-                                  @bind-Value="registrationModel.FoodRequirements" />
-                </div>
-                
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-primary btn-lg" disabled="@isSubmitting">
-            @if (isSubmitting)
-            {
-                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                <text>Registering...</text>
-            }
-            else
-            {
-                <text>Register</text>
-                    }
                     </button>
                 </div>
             </EditForm>
@@ -111,7 +134,7 @@
     private string message = string.Empty;
     private bool isSubmitting = false;
     private bool isError = false;
-    private List<Session>? sessions;
+    private List<Session>? upcomingSessions;
 
     protected override async Task OnInitializedAsync()
     {
@@ -120,16 +143,52 @@
         // Start with one empty game field
         registrationModel.Games.Add(string.Empty);
         
-        // Load available sessions
+        // Load only upcoming (non-past) sessions
         try
         {
-            sessions = (await SessionService.GetAllSessionsAsync()).ToList();
+            var allSessions = await SessionService.GetAllSessionsAsync();
+            var now = DateTime.UtcNow;
+            upcomingSessions = allSessions
+                .Where(s => !s.IsCancelled && s.Date >= now)
+                .OrderBy(s => s.Date)
+                .ToList();
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading sessions");
-            sessions = new List<Session>();
+            upcomingSessions = new List<Session>();
         }
+    }
+    
+    private bool IsFormValid()
+    {
+        // Check if all required fields are valid
+        if (string.IsNullOrWhiteSpace(registrationModel.Name))
+            return false;
+            
+        if (!registrationModel.SessionId.HasValue)
+            return false;
+            
+        // Check if at least one game is provided
+        var hasGames = registrationModel.Games.Any(g => !string.IsNullOrWhiteSpace(g));
+        if (!hasGames)
+            return false;
+            
+        // Validate that selected session is not in the past
+        if (registrationModel.SessionId.HasValue)
+        {
+            var selectedSession = upcomingSessions?.FirstOrDefault(s => s.Id == registrationModel.SessionId.Value);
+            if (selectedSession == null || selectedSession.Date < DateTime.UtcNow)
+                return false;
+        }
+        
+        return true;
+    }
+    
+    private void HandleInvalidSubmit()
+    {
+        message = "Please correct the errors above before submitting.";
+        isError = true;
     }
 
     private void AddGame()
@@ -153,6 +212,32 @@
 
         try
         {
+            // Validate session is not in the past
+            if (!registrationModel.SessionId.HasValue)
+            {
+                message = "Please select a session date.";
+                isError = true;
+                isSubmitting = false;
+                return;
+            }
+            
+            var selectedSession = upcomingSessions?.FirstOrDefault(s => s.Id == registrationModel.SessionId.Value);
+            if (selectedSession == null)
+            {
+                message = "The selected session is invalid or has passed. Please select a valid upcoming session.";
+                isError = true;
+                isSubmitting = false;
+                return;
+            }
+            
+            if (selectedSession.Date < DateTime.UtcNow)
+            {
+                message = "Cannot register for a past session. Please select an upcoming session.";
+                isError = true;
+                isSubmitting = false;
+                return;
+            }
+
             // Filter out empty game names
             var gameNames = registrationModel.Games
                 .Where(g => !string.IsNullOrWhiteSpace(g))
@@ -185,6 +270,7 @@
                 Name = UserContext.DisplayName
             };
             registrationModel.Games.Add(string.Empty);
+            registrationModel.SessionId = null;
         }
         catch (Exception ex)
         {
@@ -206,6 +292,7 @@
 
         public string? FoodRequirements { get; set; }
         
+        [Required(ErrorMessage = "Session date is required")]
         public Guid? SessionId { get; set; }
     }
 }

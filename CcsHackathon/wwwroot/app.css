@@ -91,3 +91,32 @@ a, .btn-link {
     content: var(--blazor-load-percentage-text, "Loading");
 }
 
+/* Responsive table layout for Register Game page */
+@media (max-width: 768px) {
+    .table-responsive table {
+        display: block;
+    }
+    
+    .table-responsive tbody {
+        display: block;
+    }
+    
+    .table-responsive tr {
+        display: block;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 1rem;
+    }
+    
+    .table-responsive td {
+        display: block;
+        width: 100% !important;
+        padding: 0.5rem 0;
+    }
+    
+    .table-responsive td:first-child {
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+}
+
