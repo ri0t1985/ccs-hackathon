@@ -1,8 +1,10 @@
 @page "/login"
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Authentication.OpenIdConnect
+@using CcsHackathon.Services
 @inject NavigationManager Navigation
 @inject IHttpContextAccessor HttpContextAccessor
+@inject IConfiguration Configuration
 
 <PageTitle>Login</PageTitle>
 
@@ -11,12 +13,31 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-body text-center">
-                    <h2 class="card-title mb-4">Sign in with Microsoft</h2>
-                    <p class="card-text mb-4">Please sign in to access the application.</p>
-                    <a href="/MicrosoftIdentity/Account/SignIn" class="btn btn-primary">Sign In</a>
+                    @if (useDummyAuth)
+                    {
+                        <h2 class="card-title mb-4">Dummy Authentication Mode</h2>
+                        <p class="card-text mb-4">You are automatically logged in as a demo user.</p>
+                        <p class="text-muted small mb-4">To use real Microsoft authentication, set <code>Features:UseDummyAuth</code> to <code>false</code> in appsettings.json</p>
+                        <a href="/" class="btn btn-primary">Continue</a>
+                    }
+                    else
+                    {
+                        <h2 class="card-title mb-4">Sign in with Microsoft</h2>
+                        <p class="card-text mb-4">Please sign in to access the application.</p>
+                        <a href="/MicrosoftIdentity/Account/SignIn" class="btn btn-primary">Sign In</a>
+                    }
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+@code {
+    private bool useDummyAuth = true;
+
+    protected override void OnInitialized()
+    {
+        useDummyAuth = Configuration.GetValue<bool>("Features:UseDummyAuth", true);
+    }
+}
 

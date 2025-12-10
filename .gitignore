@@ -214,6 +214,7 @@ ClientBin/
 *.dbmdl
 *.dbproj.schemaview
 *.jfm
+*.pfx
 *.publishsettings
 orleans.codegen.cs
 
@@ -360,9 +361,4 @@ FodyWeavers.xsd
 # JetBrains Rider
 .idea/
 *.sln.iml
-
-# Database files
-*.db
-*.db-shm
-*.db-wal
 
