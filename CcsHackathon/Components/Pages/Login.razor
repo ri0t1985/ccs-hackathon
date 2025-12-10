@@ -20,7 +20,7 @@
                         <h2 class="card-title mb-4">Dummy Authentication Mode</h2>
                         <p class="card-text mb-4">You are automatically logged in as a demo user.</p>
                         <p class="text-muted small mb-4">To use real Microsoft authentication, set <code>Features:UseDummyAuth</code> to <code>false</code> in appsettings.json</p>
-                        <a href="/" class="btn btn-primary">Continue</a>
+                        <a href="/register-game" class="btn btn-primary">Continue</a>
                     }
                     else
                     {
@@ -41,10 +41,10 @@
     {
         useDummyAuth = Configuration.GetValue<bool>("Features:UseDummyAuth", true);
         
-        // If already authenticated, redirect to dashboard
+        // If already authenticated, redirect to register game page
         if (UserContext.IsAuthenticated)
         {
-            Navigation.NavigateTo("/dashboard", forceLoad: true);
+            Navigation.NavigateTo("/register-game", forceLoad: true);
         }
     }
 }
