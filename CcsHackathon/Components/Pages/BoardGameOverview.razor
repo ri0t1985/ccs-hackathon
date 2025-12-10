@@ -229,7 +229,7 @@
             games = await BoardGameOverviewService.GetBoardGamesAsync(selectedSessionId);
             ApplySorting();
             
-            if (selectedSessionId.HasValue)
+            if (selectedSessionId.HasValue && games != null)
             {
                 await LoadParticipantDataAsync();
             }
@@ -238,10 +238,14 @@
                 participantCounts.Clear();
                 participantStatus.Clear();
             }
+            
+            // Force UI update
+            StateHasChanged();
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading games");
+            StateHasChanged();
         }
     }
 
@@ -276,7 +280,15 @@
     {
         var value = e.Value?.ToString();
         selectedSessionId = string.IsNullOrWhiteSpace(value) ? null : Guid.Parse(value);
+        
+        // Clear participant data when session changes
+        participantCounts.Clear();
+        participantStatus.Clear();
+        
         await LoadGamesAsync();
+        
+        // Force UI refresh after loading
+        StateHasChanged();
     }
 
     private async Task AddParticipant(string gameName)
@@ -295,6 +307,7 @@
             if (success)
             {
                 await LoadParticipantDataAsync();
+                StateHasChanged();
             }
         }
         catch (Exception ex)
@@ -318,6 +331,7 @@
             if (success)
             {
                 await LoadParticipantDataAsync();
+                StateHasChanged();
             }
         }
         catch (Exception ex)
