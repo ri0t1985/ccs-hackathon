@@ -28,14 +28,6 @@
                     <ValidationMessage For="@(() => sessionModel.Date)" />
                 </div>
                 
-                <div class="mb-3">
-                    <label for="sessionTime" class="form-label">Time</label>
-                    <InputTime TValue="TimeOnly" id="sessionTime" class="form-control" 
-                               Value="sessionModel.Time" 
-                               ValueChanged="@((TimeOnly value) => sessionModel.Time = value)"
-                               ValueExpression="@(() => sessionModel.Time)" />
-                </div>
-                
                 <button type="submit" class="btn btn-primary" disabled="@isCreating">
                     @if (isCreating)
                     {
@@ -69,28 +61,37 @@
             }
             else
             {
-                <div class="list-group">
-                    @foreach (var session in sessions)
-                    {
-                        <div class="list-group-item">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h5 class="mb-1">@session.Date.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</h5>
-                                <div>
-                                    <button class="btn btn-sm btn-outline-secondary me-2" 
-                                            @onclick="() => EditSession(session)"
-                                            title="Reschedule">
-                                        <span>✏️</span>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger" 
-                                            @onclick="() => CancelSession(session.Id)"
-                                            title="Cancel">
-                                        <span>❌</span>
-                                    </button>
-                                </div>
-                            </div>
-                            <p class="mb-1 small text-muted">Created: @session.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</p>
-                        </div>
-                    }
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Session Date</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var session in sessions)
+                            {
+                                <tr>
+                                    <td class="align-middle">
+                                        <strong>@session.Date.ToString("yyyy-MM-dd")</strong>
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-secondary me-2" 
+                                                @onclick="() => EditSession(session)"
+                                                title="Reschedule">
+                                            ✏️ Edit
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" 
+                                                @onclick="() => CancelSession(session.Id)"
+                                                title="Cancel">
+                                            ❌ Cancel
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
             }
         </div>
@@ -100,12 +101,16 @@
     {
         <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
             <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Reschedule Session</h5>
-                        <button type="button" class="btn-close" @onclick="CancelEdit"></button>
+                <div class="modal-content" style="background-color: #f8f9fa;">
+                    <div class="modal-header" style="background-color: #f8f9fa;">
+                        <h3 class="modal-title">Reschedule Session</h3>
                     </div>
-                    <div class="modal-body">
+                    <div class="modal-body" style="background-color: #f8f9fa;">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Current Session Date:</label>
+                            <p class="mb-0">@editingSession.Date.ToString("yyyy-MM-dd")</p>
+                        </div>
+                        
                         <EditForm Model="@editSessionModel" OnValidSubmit="HandleUpdateSession">
                             <DataAnnotationsValidator />
                             <ValidationSummary />
@@ -117,14 +122,6 @@
                                            ValueChanged="@((DateOnly value) => editSessionModel.Date = value)"
                                            ValueExpression="@(() => editSessionModel.Date)" />
                                 <ValidationMessage For="@(() => editSessionModel.Date)" />
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="editSessionTime" class="form-label">New Time</label>
-                                <InputTime TValue="TimeOnly" id="editSessionTime" class="form-control" 
-                                           Value="editSessionModel.Time" 
-                                           ValueChanged="@((TimeOnly value) => editSessionModel.Time = value)"
-                                           ValueExpression="@(() => editSessionModel.Time)" />
                             </div>
                             
                             <div class="d-flex justify-content-end">
@@ -181,8 +178,7 @@
 
         try
         {
-            var dateTime = sessionModel.Date.ToDateTime(sessionModel.Time);
-            await SessionService.CreateSessionAsync(dateTime);
+            await SessionService.CreateSessionAsync(sessionModel.Date);
             
             createMessage = "Session created successfully!";
             sessionModel = new SessionModel();
@@ -203,11 +199,9 @@
     private void EditSession(Session session)
     {
         editingSession = session;
-        var localDate = session.Date.ToLocalTime();
         editSessionModel = new SessionModel
         {
-            Date = DateOnly.FromDateTime(localDate),
-            Time = TimeOnly.FromDateTime(localDate)
+            Date = session.Date
         };
     }
 
@@ -224,8 +218,7 @@
         isUpdating = true;
         try
         {
-            var dateTime = editSessionModel.Date.ToDateTime(editSessionModel.Time);
-            await SessionService.UpdateSessionDateAsync(editingSession.Id, dateTime);
+            await SessionService.UpdateSessionDateAsync(editingSession.Id, editSessionModel.Date);
             
             editingSession = null;
             editSessionModel = null;
@@ -258,8 +251,6 @@
     {
         [Required(ErrorMessage = "Date is required")]
         public DateOnly Date { get; set; } = DateOnly.FromDateTime(DateTime.Today);
-
-        public TimeOnly Time { get; set; } = TimeOnly.FromDateTime(DateTime.Now);
     }
 }
 

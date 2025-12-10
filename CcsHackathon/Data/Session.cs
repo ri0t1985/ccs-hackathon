@@ -3,7 +3,7 @@ namespace CcsHackathon.Data;
 public class Session
 {
     public Guid Id { get; set; }
-    public DateTime Date { get; set; } // UTC date for the session
+    public DateOnly Date { get; set; } // Date only (no time) for the session
     public DateTime CreatedAt { get; set; }
     public bool IsCancelled { get; set; } // For rescheduling/cancellation
     

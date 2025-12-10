@@ -23,9 +23,16 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Session>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Date).IsRequired();
+            entity.Property(e => e.Date)
+                .IsRequired()
+                .HasConversion(
+                    v => v.ToDateTime(TimeOnly.MinValue),
+                    v => DateOnly.FromDateTime(v));
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.IsCancelled).IsRequired();
+            
+            // Ensure unique constraint on Date (one session per day)
+            entity.HasIndex(e => e.Date).IsUnique();
         });
 
         // Configure Registration entity

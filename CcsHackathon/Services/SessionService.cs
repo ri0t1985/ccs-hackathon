@@ -12,31 +12,30 @@ public class SessionService : ISessionService
         _dbContext = dbContext;
     }
 
-    public async Task<Session> CreateSessionAsync(DateTime date)
+    public async Task<Session> CreateSessionAsync(DateOnly date)
     {
-        var dateUtc = date.ToUniversalTime();
-        var dateOnly = DateOnly.FromDateTime(dateUtc);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         
         // Validate: Cannot schedule sessions in the past
-        if (dateUtc < DateTime.UtcNow)
+        if (date < today)
         {
             throw new ArgumentException("Cannot schedule sessions in the past.");
         }
         
         // Validate: Cannot have multiple sessions on the same day
         var existingSessionOnDate = await _dbContext.Sessions
-            .Where(s => !s.IsCancelled && DateOnly.FromDateTime(s.Date) == dateOnly)
+            .Where(s => !s.IsCancelled && s.Date == date)
             .FirstOrDefaultAsync();
             
         if (existingSessionOnDate != null)
         {
-            throw new InvalidOperationException($"A session already exists on {dateOnly:yyyy-MM-dd}. Only one session per day is allowed.");
+            throw new InvalidOperationException($"A session already exists on {date:yyyy-MM-dd}. Only one session per day is allowed.");
         }
 
         var session = new Session
         {
             Id = Guid.NewGuid(),
-            Date = dateUtc,
+            Date = date,
             CreatedAt = DateTime.UtcNow,
             IsCancelled = false
         };
@@ -54,6 +53,15 @@ public class SessionService : ISessionService
             .OrderBy(s => s.Date)
             .ToListAsync();
     }
+    
+    public async Task<IEnumerable<Session>> GetUpcomingSessionsAsync()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        return await _dbContext.Sessions
+            .Where(s => !s.IsCancelled && s.Date >= today)
+            .OrderBy(s => s.Date)
+            .ToListAsync();
+    }
 
     public async Task<Session?> GetSessionByIdAsync(Guid sessionId)
     {
@@ -61,7 +69,7 @@ public class SessionService : ISessionService
             .FirstOrDefaultAsync(s => s.Id == sessionId);
     }
 
-    public async Task<Session> UpdateSessionDateAsync(Guid sessionId, DateTime newDate)
+    public async Task<Session> UpdateSessionDateAsync(Guid sessionId, DateOnly newDate)
     {
         var session = await _dbContext.Sessions.FindAsync(sessionId);
         if (session == null)
@@ -69,26 +77,25 @@ public class SessionService : ISessionService
             throw new ArgumentException($"Session with ID {sessionId} not found.");
         }
 
-        var dateUtc = newDate.ToUniversalTime();
-        var dateOnly = DateOnly.FromDateTime(dateUtc);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         
         // Validate: Cannot schedule sessions in the past
-        if (dateUtc < DateTime.UtcNow)
+        if (newDate < today)
         {
             throw new ArgumentException("Cannot schedule sessions in the past.");
         }
         
         // Validate: Cannot have multiple sessions on the same day (excluding current session)
         var existingSessionOnDate = await _dbContext.Sessions
-            .Where(s => !s.IsCancelled && s.Id != sessionId && DateOnly.FromDateTime(s.Date) == dateOnly)
+            .Where(s => !s.IsCancelled && s.Id != sessionId && s.Date == newDate)
             .FirstOrDefaultAsync();
             
         if (existingSessionOnDate != null)
         {
-            throw new InvalidOperationException($"A session already exists on {dateOnly:yyyy-MM-dd}. Only one session per day is allowed.");
+            throw new InvalidOperationException($"A session already exists on {newDate:yyyy-MM-dd}. Only one session per day is allowed.");
         }
 
-        session.Date = dateUtc;
+        session.Date = newDate;
         await _dbContext.SaveChangesAsync();
 
         return session;
