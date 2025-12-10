@@ -1,65 +1,169 @@
 @page "/register-game"
 @using System.ComponentModel.DataAnnotations
 @using CcsHackathon.Services
+@using CcsHackathon.Data
 @attribute [Authorize]
 @inject IUserContext UserContext
+@inject IRegistrationService RegistrationService
 
 <PageTitle>Register Game</PageTitle>
 
 <div class="container mt-4">
-    <h2>Register Your Game</h2>
+    <h2>Register Your Games</h2>
     <p class="text-muted">Logged in as: <strong>@UserContext.DisplayName</strong> (@UserContext.Email)</p>
     
-    <EditForm Model="@gameRegistration" OnValidSubmit="HandleValidSubmit">
+    <EditForm Model="@registrationModel" OnValidSubmit="HandleValidSubmit">
         <DataAnnotationsValidator />
         
         <div class="mb-3">
             <label for="name" class="form-label">Your Name</label>
-            <InputText id="name" class="form-control" @bind-Value="gameRegistration.Name" />
-            <ValidationMessage For="@(() => gameRegistration.Name)" />
+            <InputText id="name" class="form-control" @bind-Value="registrationModel.Name" />
+            <ValidationMessage For="@(() => registrationModel.Name)" />
         </div>
         
         <div class="mb-3">
-            <label for="gameName" class="form-label">Board Game Name</label>
-            <InputText id="gameName" class="form-control" @bind-Value="gameRegistration.GameName" />
-            <ValidationMessage For="@(() => gameRegistration.GameName)" />
+            <label class="form-label">Board Games</label>
+            <p class="text-muted small">Add one or more board games you plan to bring</p>
+            
+            @for (int i = 0; i < registrationModel.Games.Count; i++)
+            {
+                var index = i;
+                <div class="input-group mb-2">
+                    <InputText class="form-control" 
+                               placeholder="Enter board game name" 
+                               @bind-Value="registrationModel.Games[index]" />
+                    <button type="button" 
+                            class="btn btn-outline-danger" 
+                            @onclick="() => RemoveGame(index)"
+                            disabled="@(registrationModel.Games.Count <= 1)">
+                        Remove
+                    </button>
+                </div>
+            }
+            
+            <button type="button" 
+                    class="btn btn-outline-secondary btn-sm" 
+                    @onclick="AddGame">
+                + Add Another Game
+            </button>
+            <ValidationMessage For="@(() => registrationModel.Games)" />
         </div>
         
-        <button type="submit" class="btn btn-primary">Register</button>
+        <div class="mb-3">
+            <label for="foodRequirements" class="form-label">Food Requirements (Optional)</label>
+            <InputTextArea id="foodRequirements" 
+                          class="form-control" 
+                          rows="3"
+                          placeholder="Enter any dietary restrictions or food preferences..."
+                          @bind-Value="registrationModel.FoodRequirements" />
+        </div>
+        
+        <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+            @if (isSubmitting)
+            {
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <text>Registering...</text>
+            }
+            else
+            {
+                <text>Register</text>
+            }
+        </button>
     </EditForm>
     
     @if (!string.IsNullOrEmpty(message))
     {
-        <div class="alert alert-success mt-3" role="alert">
+        <div class="alert @(isError ? "alert-danger" : "alert-success") mt-3" role="alert">
             @message
         </div>
     }
 </div>
 
 @code {
-    private GameRegistration gameRegistration = new();
+    private RegistrationModel registrationModel = new();
     private string message = string.Empty;
+    private bool isSubmitting = false;
+    private bool isError = false;
 
     protected override void OnInitialized()
     {
         // Pre-fill name from user context
-        gameRegistration.Name = UserContext.DisplayName;
+        registrationModel.Name = UserContext.DisplayName;
+        // Start with one empty game field
+        registrationModel.Games.Add(string.Empty);
     }
 
-    private void HandleValidSubmit()
+    private void AddGame()
     {
-        // In a real application, this would save to a database
-        message = $"Thank you, {gameRegistration.Name}! Your game '{gameRegistration.GameName}' has been registered.";
-        gameRegistration = new GameRegistration { Name = UserContext.DisplayName };
+        registrationModel.Games.Add(string.Empty);
     }
 
-    public class GameRegistration
+    private void RemoveGame(int index)
+    {
+        if (registrationModel.Games.Count > 1)
+        {
+            registrationModel.Games.RemoveAt(index);
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        isSubmitting = true;
+        isError = false;
+        message = string.Empty;
+
+        try
+        {
+            // Filter out empty game names
+            var gameNames = registrationModel.Games
+                .Where(g => !string.IsNullOrWhiteSpace(g))
+                .Select(g => g.Trim())
+                .ToList();
+
+            if (gameNames.Count == 0)
+            {
+                message = "Please add at least one board game.";
+                isError = true;
+                isSubmitting = false;
+                return;
+            }
+
+            var registration = await RegistrationService.CreateRegistrationAsync(
+                UserContext.UserId,
+                registrationModel.Name,
+                string.IsNullOrWhiteSpace(registrationModel.FoodRequirements) 
+                    ? null 
+                    : registrationModel.FoodRequirements.Trim(),
+                gameNames
+            );
+
+            message = $"Thank you, {registrationModel.Name}! Your registration for {gameNames.Count} game(s) has been saved successfully.";
+            
+            // Reset form
+            registrationModel = new RegistrationModel
+            {
+                Name = UserContext.DisplayName
+            };
+            registrationModel.Games.Add(string.Empty);
+        }
+        catch (Exception ex)
+        {
+            message = $"An error occurred while saving your registration: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    public class RegistrationModel
     {
         [Required(ErrorMessage = "Name is required")]
         public string Name { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Game name is required")]
-        public string GameName { get; set; } = string.Empty;
+        public List<string> Games { get; set; } = new();
+
+        public string? FoodRequirements { get; set; }
     }
 }
-
