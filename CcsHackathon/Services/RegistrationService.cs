@@ -26,11 +26,26 @@ public class RegistrationService : IRegistrationService
 
         foreach (var gameName in gameNames)
         {
+            // Find or create BoardGame by name
+            var boardGame = await _dbContext.BoardGames
+                .FirstOrDefaultAsync(bg => bg.Name == gameName);
+
+            if (boardGame == null)
+            {
+                boardGame = new BoardGame
+                {
+                    Id = Guid.NewGuid(),
+                    Name = gameName,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _dbContext.BoardGames.Add(boardGame);
+            }
+
             var gameRegistration = new GameRegistration
             {
                 Id = Guid.NewGuid(),
                 RegistrationId = registration.Id,
-                GameId = gameName
+                BoardGameId = boardGame.Id
             };
             registration.GameRegistrations.Add(gameRegistration);
         }

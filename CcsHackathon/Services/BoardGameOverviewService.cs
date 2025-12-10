@@ -14,9 +14,10 @@ public class BoardGameOverviewService : IBoardGameOverviewService
 
     public async Task<IEnumerable<BoardGameOverviewItem>> GetBoardGamesAsync(Guid? sessionId = null)
     {
-        // Get all unique game names from GameRegistrations (including those without AI data)
+        // Get all unique board games from GameRegistrations (including those without AI data)
         IQueryable<GameRegistration> gameRegistrationsQuery = _dbContext.GameRegistrations
             .Include(gr => gr.Registration)
+            .Include(gr => gr.BoardGame)
             .Include(gr => gr.BoardGameCache);
 
         // If sessionId is provided, filter games that are registered for that session
@@ -27,9 +28,9 @@ public class BoardGameOverviewService : IBoardGameOverviewService
 
         var gameRegistrations = await gameRegistrationsQuery.ToListAsync();
 
-        // Group by game name to get unique games, preferring entries with AI data
+        // Group by BoardGameId to get unique games, preferring entries with AI data
         var uniqueGames = gameRegistrations
-            .GroupBy(gr => gr.GameId)
+            .GroupBy(gr => gr.BoardGameId)
             .Select(g => g.OrderByDescending(gr => gr.BoardGameCache?.HasAiData ?? false).First())
             .ToList();
 
@@ -37,7 +38,7 @@ public class BoardGameOverviewService : IBoardGameOverviewService
         var games = uniqueGames
             .Select(gr => new BoardGameOverviewItem
             {
-                GameName = gr.GameId,
+                GameName = gr.BoardGame.Name,
                 Summary = gr.BoardGameCache?.Summary,
                 Complexity = gr.BoardGameCache?.Complexity,
                 TimeToSetupMinutes = gr.BoardGameCache?.TimeToSetupMinutes,
