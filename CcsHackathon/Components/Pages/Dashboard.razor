@@ -3,11 +3,20 @@
 @using Microsoft.Graph.Models
 @attribute [Authorize]
 @inject IGraphService GraphService
+@inject IConfiguration Configuration
 
 <PageTitle>Dashboard</PageTitle>
 
 <div class="container mt-4">
     <h2>Users</h2>
+    
+    @if (useDummyAuth)
+    {
+        <div class="alert alert-info" role="alert">
+            <strong>Dummy Authentication Mode:</strong> Microsoft Graph is not available in dummy mode. 
+            To view real users, set <code>Features:UseDummyAuth</code> to <code>false</code> in appsettings.json
+        </div>
+    }
     
     @if (users == null)
     {
@@ -43,6 +52,12 @@
 
 @code {
     private IEnumerable<User>? users;
+    private bool useDummyAuth = true;
+
+    protected override void OnInitialized()
+    {
+        useDummyAuth = Configuration.GetValue<bool>("Features:UseDummyAuth", true);
+    }
 
     protected override async Task OnInitializedAsync()
     {

@@ -19,40 +19,77 @@ builder.Services.AddRazorComponents()
 
 var mvcBuilder = builder.Services.AddControllersWithViews();
 
-// Configure Azure AD authentication
-var azureAdSection = builder.Configuration.GetSection("AzureAd");
-builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApp(azureAdSection)
-    .EnableTokenAcquisitionToCallDownstreamApi()
-    .AddInMemoryTokenCaches();
+// Check feature flag for dummy authentication
+var useDummyAuth = builder.Configuration.GetValue<bool>("Features:UseDummyAuth", true);
 
-// Configure Microsoft Graph
-builder.Services.AddHttpClient();
-builder.Services.AddScoped(serviceProvider =>
+if (useDummyAuth)
 {
-    var tokenAcquisition = serviceProvider.GetRequiredService<ITokenAcquisition>();
-    var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
-    var graphSection = builder.Configuration.GetSection("MicrosoftGraph");
-    var scopes = graphSection["Scopes"]?.Split(' ') ?? new[] { "User.Read.All" };
+    // Dummy authentication mode - no external calls
+    builder.Services.AddAuthentication("Dummy")
+        .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, DummyAuthenticationHandler>(
+            "Dummy", options => { });
     
-    var credential = new CcsHackathon.TokenCredentialWrapper(tokenAcquisition, scopes);
-    var authProvider = new AzureIdentityAuthenticationProvider(credential);
-    var httpClient = httpClientFactory.CreateClient();
-    
-    var requestAdapter = new Microsoft.Kiota.Http.HttpClientLibrary.HttpClientRequestAdapter(authProvider, httpClient: httpClient);
-    return new GraphServiceClient(requestAdapter);
-});
+    // Register dummy user context
+    builder.Services.AddScoped<IUserContext, DummyUserContext>();
+}
+else
+{
+    // Real Azure AD authentication mode
+    var azureAdSection = builder.Configuration.GetSection("AzureAd");
+    builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+        .AddMicrosoftIdentityWebApp(azureAdSection)
+        .EnableTokenAcquisitionToCallDownstreamApi()
+        .AddInMemoryTokenCaches();
 
-mvcBuilder.AddMicrosoftIdentityUI();
+    // Configure Microsoft Graph
+    builder.Services.AddHttpClient();
+    builder.Services.AddScoped(serviceProvider =>
+    {
+        var tokenAcquisition = serviceProvider.GetRequiredService<ITokenAcquisition>();
+        var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+        var graphSection = builder.Configuration.GetSection("MicrosoftGraph");
+        var scopes = graphSection["Scopes"]?.Split(' ') ?? new[] { "User.Read.All" };
+        
+        var credential = new CcsHackathon.TokenCredentialWrapper(tokenAcquisition, scopes);
+        var authProvider = new AzureIdentityAuthenticationProvider(credential);
+        var httpClient = httpClientFactory.CreateClient();
+        
+        var requestAdapter = new Microsoft.Kiota.Http.HttpClientLibrary.HttpClientRequestAdapter(authProvider, httpClient: httpClient);
+        return new GraphServiceClient(requestAdapter);
+    });
+
+    mvcBuilder.AddMicrosoftIdentityUI();
+    
+    // Register Azure AD user context
+    builder.Services.AddHttpContextAccessor();
+    builder.Services.AddScoped<IUserContext, AzureAdUserContext>();
+}
 
 // Add authorization
 builder.Services.AddAuthorization(options =>
 {
-    options.FallbackPolicy = options.DefaultPolicy;
+    if (useDummyAuth)
+    {
+        // In dummy mode, allow unauthenticated access but treat as authenticated via handler
+        options.FallbackPolicy = options.DefaultPolicy;
+    }
+    else
+    {
+        options.FallbackPolicy = options.DefaultPolicy;
+    }
 });
 
 // Register services
-builder.Services.AddScoped<IGraphService, GraphService>();
+if (!useDummyAuth)
+{
+    // Only register GraphService in real auth mode
+    builder.Services.AddScoped<IGraphService, GraphService>();
+}
+else
+{
+    // Register a dummy GraphService for dummy mode
+    builder.Services.AddScoped<IGraphService, DummyGraphService>();
+}
 builder.Services.AddScoped<IAgentOrchestrator, AgentOrchestrator>();
 
 // Register DbContext

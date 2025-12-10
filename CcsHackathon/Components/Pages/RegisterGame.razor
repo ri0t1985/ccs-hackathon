@@ -1,11 +1,14 @@
 @page "/register-game"
 @using System.ComponentModel.DataAnnotations
+@using CcsHackathon.Services
 @attribute [Authorize]
+@inject IUserContext UserContext
 
 <PageTitle>Register Game</PageTitle>
 
 <div class="container mt-4">
     <h2>Register Your Game</h2>
+    <p class="text-muted">Logged in as: <strong>@UserContext.DisplayName</strong> (@UserContext.Email)</p>
     
     <EditForm Model="@gameRegistration" OnValidSubmit="HandleValidSubmit">
         <DataAnnotationsValidator />
@@ -37,11 +40,17 @@
     private GameRegistration gameRegistration = new();
     private string message = string.Empty;
 
+    protected override void OnInitialized()
+    {
+        // Pre-fill name from user context
+        gameRegistration.Name = UserContext.DisplayName;
+    }
+
     private void HandleValidSubmit()
     {
         // In a real application, this would save to a database
         message = $"Thank you, {gameRegistration.Name}! Your game '{gameRegistration.GameName}' has been registered.";
-        gameRegistration = new GameRegistration();
+        gameRegistration = new GameRegistration { Name = UserContext.DisplayName };
     }
 
     public class GameRegistration
