@@ -1,4 +1,6 @@
 ﻿@inherits LayoutComponentBase
+@using CcsHackathon.Services
+@inject IUserContext UserContext
 
 <div class="page">
     <div class="sidebar">
@@ -7,6 +9,10 @@
 
     <main>
         <div class="top-row px-4">
+            @if (UserContext.IsAuthenticated)
+            {
+                <span class="me-3">@UserContext.DisplayName (@UserContext.Email)</span>
+            }
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
         </div>
 
