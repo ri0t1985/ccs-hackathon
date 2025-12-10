@@ -1,7 +1,9 @@
 using CcsHackathon.Components;
+using CcsHackathon.Data;
 using CcsHackathon.Services;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Graph;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
@@ -53,6 +55,10 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddScoped<IGraphService, GraphService>();
 builder.Services.AddScoped<IAgentOrchestrator, AgentOrchestrator>();
 
+// Register DbContext
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -69,6 +75,13 @@ app.UseAntiforgery();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Ensure database is created
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    dbContext.Database.EnsureCreated();
+}
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
