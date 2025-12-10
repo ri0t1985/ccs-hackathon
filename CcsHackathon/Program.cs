@@ -103,6 +103,9 @@ builder.Services.AddHostedService<BoardGameAiBackgroundService>();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Configure graceful shutdown timeout (10 seconds)
+builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(10));
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -198,8 +201,5 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.MapControllers();
-
-// Configure graceful shutdown timeout (10 seconds)
-builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(10));
 
 app.Run();
