@@ -9,8 +9,5 @@ public class Session
     
     // Navigation property for one-to-many relationship with Registrations
     public ICollection<Registration> Registrations { get; set; } = new List<Registration>();
-    
-    // Navigation property for many-to-many relationship with games through participants
-    public ICollection<GameParticipant> GameParticipants { get; set; } = new List<GameParticipant>();
 }
 
