@@ -18,4 +18,3 @@ public class BoardGameCache
     // Navigation property for one-to-one relationship with GameRegistration
     public GameRegistration GameRegistration { get; set; } = null!;
 }
-

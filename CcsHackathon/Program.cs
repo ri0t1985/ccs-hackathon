@@ -93,6 +93,7 @@ else
 builder.Services.AddScoped<IAgentOrchestrator, AgentOrchestrator>();
 builder.Services.AddScoped<IRegistrationService, RegistrationService>();
 builder.Services.AddScoped<IBoardGameAiService, BoardGameAiService>();
+builder.Services.AddScoped<IBoardGameOverviewService, BoardGameOverviewService>();
 
 // Register background service for AI data processing
 builder.Services.AddHostedService<BoardGameAiBackgroundService>();
@@ -114,6 +115,8 @@ app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages:
 app.UseHttpsRedirection();
 
 app.UseAntiforgery();
+
+app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();
