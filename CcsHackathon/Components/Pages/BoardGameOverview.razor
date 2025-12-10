@@ -15,7 +15,10 @@
     <div class="row mb-3">
         <div class="col-md-4">
             <label for="sessionFilter" class="form-label">Select Session <span class="text-danger">*</span></label>
-            <InputSelect id="sessionFilter" class="form-select" Value="@selectedSessionIdString" ValueChanged="@((string value) => OnSessionFilterChanged(value))">
+            <InputSelect id="sessionFilter" class="form-select" 
+                         Value="@selectedSessionIdString" 
+                         ValueChanged="@((string value) => OnSessionFilterChanged(value))"
+                         ValueExpression="@(() => selectedSessionIdString)">
                 <option value="">-- Select a session --</option>
                 @if (sessions != null)
                 {
