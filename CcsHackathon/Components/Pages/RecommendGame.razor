@@ -1,0 +1,197 @@
+@page "/recommendations"
+@using CcsHackathon.Services
+@attribute [Authorize]
+@inject IGameRecommendationService RecommendationService
+@inject IUserContext UserContext
+@inject ILogger<RecommendGame> Logger
+
+<PageTitle>Game Recommendations</PageTitle>
+
+<div class="container mt-4">
+    <h2>Game Recommendations</h2>
+    
+    @if (recommendations == null)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading recommendations...</p>
+        </div>
+    }
+    else if (!recommendations.Games.Any())
+    {
+        <div class="alert alert-info" role="alert">
+            <strong>No games available.</strong> There are no board games in the database to recommend.
+        </div>
+    }
+    else
+    {
+        <div class="mb-4">
+            @if (recommendations.IsFallbackMode)
+            {
+                <div class="alert alert-warning" role="alert">
+                    <strong>Your Top-Rated Games</strong>
+                    <p class="mb-0">You've rated all available games! Here are your top-rated games instead.</p>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-success" role="alert">
+                    <strong>Recommended for You</strong>
+                    <p class="mb-0">Based on your past ratings and game preferences, here are games you might enjoy.</p>
+                </div>
+            }
+        </div>
+
+        <div class="row">
+            @foreach (var game in recommendations.Games)
+            {
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">@game.GameName</h5>
+                            
+                            @if (!string.IsNullOrWhiteSpace(game.Description))
+                            {
+                                <p class="card-text text-muted small">@game.Description</p>
+                            }
+
+                            <div class="mb-2">
+                                @if (game.AverageRating.HasValue)
+                                {
+                                    <div>
+                                        <strong>Average Rating:</strong>
+                                        <span class="ms-2">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                <span class="@(i <= (int)Math.Round(game.AverageRating.Value) ? "text-warning" : "text-muted")">★</span>
+                                            }
+                                        </span>
+                                        <span class="ms-2 text-muted small">
+                                            @game.AverageRating.Value.ToString("F1") / 5.0
+                                            @if (game.RatingCount > 0)
+                                            {
+                                                <text>(@game.RatingCount @(game.RatingCount == 1 ? "rating" : "ratings"))</text>
+                                            }
+                                        </span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div>
+                                        <strong>Average Rating:</strong>
+                                        <span class="ms-2 text-muted">No ratings yet</span>
+                                    </div>
+                                }
+                            </div>
+
+                            @if (recommendations.IsFallbackMode && game.UserRating.HasValue)
+                            {
+                                <div class="mb-2">
+                                    <strong>Your Rating:</strong>
+                                    <span class="ms-2">
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            <span class="@(i <= (int)Math.Round(game.UserRating.Value) ? "text-warning" : "text-muted")">★</span>
+                                        }
+                                    </span>
+                                    <span class="ms-2 text-muted small">@game.UserRating.Value.ToString("F1") / 5.0</span>
+                                </div>
+                            }
+
+                            <div class="game-metadata">
+                                @if (game.Complexity.HasValue)
+                                {
+                                    <div class="mb-1">
+                                        <strong>Complexity:</strong>
+                                        <span class="ms-2">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                <span class="@(i <= (int)Math.Round(game.Complexity.Value) ? "text-warning" : "text-muted")">★</span>
+                                            }
+                                        </span>
+                                    </div>
+                                }
+
+                                @if (game.AveragePlaytimeMinutes.HasValue)
+                                {
+                                    <div class="mb-1">
+                                        <strong>Playtime:</strong> <span>@game.AveragePlaytimeMinutes.Value minutes</span>
+                                    </div>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(game.GameType))
+                                {
+                                    <div class="mb-1">
+                                        <strong>Type:</strong> <span>@game.GameType</span>
+                                    </div>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(game.Theme))
+                                {
+                                    <div class="mb-1">
+                                        <strong>Theme:</strong> <span>@game.Theme</span>
+                                    </div>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(game.ComplexityTier))
+                                {
+                                    <div class="mb-1">
+                                        <strong>Complexity Tier:</strong> <span>@game.ComplexityTier</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (recommendations.Games.Count < 3 && !recommendations.IsFallbackMode)
+        {
+            <div class="alert alert-info mt-3" role="alert">
+                <p class="mb-0">
+                    Showing @recommendations.Games.Count @(recommendations.Games.Count == 1 ? "recommendation" : "recommendations").
+                    @if (recommendations.Games.Count == 0)
+                    {
+                        <text>No unrated games available to recommend.</text>
+                    }
+                </p>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private GameRecommendationResult? recommendations;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (UserContext == null || string.IsNullOrWhiteSpace(UserContext.UserId))
+        {
+            Logger.LogError("UserContext or UserId is null when loading recommendations");
+            return;
+        }
+
+        await LoadRecommendationsAsync();
+    }
+
+    private async Task LoadRecommendationsAsync()
+    {
+        try
+        {
+            recommendations = await RecommendationService.GetRecommendationsAsync(UserContext.UserId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading game recommendations");
+            recommendations = new GameRecommendationResult
+            {
+                IsFallbackMode = false,
+                Games = new List<RecommendedGame>()
+            };
+        }
+    }
+}
+
