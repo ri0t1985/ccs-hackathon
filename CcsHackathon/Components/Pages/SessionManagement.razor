@@ -86,6 +86,11 @@
                                         </a>
                                     </td>
                                     <td class="text-end">
+                                        <a href="/sessions/@session.Id/attendees" 
+                                           class="btn btn-sm btn-outline-primary me-2" 
+                                           title="View Attendees">
+                                            👥 Attendees
+                                        </a>
                                         <button class="btn btn-sm btn-outline-secondary me-2" 
                                                 @onclick="() => EditSession(session)"
                                                 title="Reschedule">
@@ -125,6 +130,7 @@
                             <tr>
                                 <th>Session Date</th>
                                 <th>Number of Attendees</th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -137,6 +143,13 @@
                                     <td class="align-middle">
                                         <a href="/sessions/@sessionWithCount.Session.Id/attendees" class="text-decoration-none">
                                             @sessionWithCount.AttendeeCount
+                                        </a>
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="/sessions/@sessionWithCount.Session.Id/attendees" 
+                                           class="btn btn-sm btn-outline-primary" 
+                                           title="View Attendees">
+                                            👥 Attendees
                                         </a>
                                     </td>
                                 </tr>
@@ -167,6 +180,7 @@
                             <tr>
                                 <th>Session Date</th>
                                 <th>Number of Attendees</th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -179,6 +193,13 @@
                                     <td class="align-middle">
                                         <a href="/sessions/@sessionWithCount.Session.Id/attendees" class="text-decoration-none">
                                             @sessionWithCount.AttendeeCount
+                                        </a>
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="/sessions/@sessionWithCount.Session.Id/attendees" 
+                                           class="btn btn-sm btn-outline-primary" 
+                                           title="View Attendees">
+                                            👥 Attendees
                                         </a>
                                     </td>
                                 </tr>
