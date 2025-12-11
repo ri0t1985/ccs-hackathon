@@ -64,6 +64,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.Description).IsRequired(false);
             entity.Property(e => e.SetupComplexity).HasPrecision(5, 2);
             entity.Property(e => e.Score).HasPrecision(5, 2);
+            entity.Property(e => e.AveragePlaytimeMinutes).IsRequired(false);
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.LastUpdatedAt).IsRequired(false);
 

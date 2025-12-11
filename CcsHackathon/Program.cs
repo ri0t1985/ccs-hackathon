@@ -169,7 +169,7 @@ using (var scope = app.Services.CreateScope())
                     .FirstOrDefaultAsync();
                 
                 var testBoardGameQuery = await dbContext.BoardGames
-                    .Select(bg => new { bg.Id, bg.Name, bg.Description, bg.SetupComplexity, bg.Score })
+                    .Select(bg => new { bg.Id, bg.Name, bg.Description, bg.SetupComplexity, bg.Score, bg.AveragePlaytimeMinutes })
                     .FirstOrDefaultAsync();
                 
                 // Check if migration from GameId to BoardGameId is needed

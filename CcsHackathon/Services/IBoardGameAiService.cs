@@ -11,6 +11,7 @@ public class BoardGameAiData
 {
     public decimal Complexity { get; set; }
     public int TimeToSetupMinutes { get; set; }
+    public int AveragePlaytimeMinutes { get; set; }
     public string Summary { get; set; } = string.Empty;
 }
 
