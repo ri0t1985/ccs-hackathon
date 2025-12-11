@@ -1,6 +1,19 @@
 -- SQL Seed Data Script for BoardGameNight Database
 -- This script populates the database with test data for demo purposes
 -- It is idempotent - can be run multiple times safely
+--
+-- USAGE INSTRUCTIONS:
+--
+-- PowerShell (Windows):
+--   Get-Content CcsHackathon/Data/SeedData.sql | sqlite3 boardgamenight.db
+--   OR if sqlite3 is not in PATH:
+--   Get-Content CcsHackathon/Data/SeedData.sql | & "C:\path\to\sqlite3.exe" boardgamenight.db
+--
+-- Bash/Linux/Mac:
+--   sqlite3 boardgamenight.db < CcsHackathon/Data/SeedData.sql
+--
+-- Alternative: Use a SQLite GUI tool (DB Browser for SQLite, etc.) to open the database
+-- and execute this script directly.
 
 -- Clear existing test data (optional - comment out if you want to preserve existing data)
 -- Note: This will delete ALL data, not just test data
