@@ -86,6 +86,7 @@
                         </th>
                         <th>Setup Time</th>
                         <th>Average Playtime</th>
+                        <th>Average Rating</th>
                         <th>AI Data</th>
                         <th>Actions</th>
                     </tr>
@@ -123,6 +124,23 @@
                                 else
                                 {
                                     <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (game.AverageRating.HasValue)
+                                {
+                                    <div>
+                                        @((MarkupString)RenderStarRating(game.AverageRating.Value))
+                                        <span class="ms-2 text-muted small">(@game.AverageRating.Value.ToString("F1"))</span>
+                                        @if (game.RatingCount > 0)
+                                        {
+                                            <span class="ms-1 text-muted small">(@game.RatingCount @(game.RatingCount == 1 ? "rating" : "ratings"))</span>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">No ratings yet</span>
                                 }
                             </td>
                             <td>

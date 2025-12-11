@@ -6,10 +6,12 @@ namespace CcsHackathon.Services;
 public class BoardGameOverviewService : IBoardGameOverviewService
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly IGameRatingService _ratingService;
 
-    public BoardGameOverviewService(ApplicationDbContext dbContext)
+    public BoardGameOverviewService(ApplicationDbContext dbContext, IGameRatingService ratingService)
     {
         _dbContext = dbContext;
+        _ratingService = ratingService;
     }
 
     public async Task<IEnumerable<BoardGameOverviewItem>> GetBoardGamesAsync(Guid? sessionId = null)
@@ -41,6 +43,17 @@ public class BoardGameOverviewService : IBoardGameOverviewService
             .Select(g => g.OrderByDescending(gr => gr.BoardGameCache?.HasAiData ?? false).First())
             .ToList();
 
+        // Get average ratings for all games
+        var boardGameIds = uniqueGames.Select(g => g.BoardGameId).ToList();
+        var averageRatings = await _ratingService.GetAverageRatingsAsync(boardGameIds);
+
+        // Get rating counts for all games
+        var ratingCounts = await _dbContext.GameRatings
+            .Where(r => boardGameIds.Contains(r.BoardGameId))
+            .GroupBy(r => r.BoardGameId)
+            .Select(g => new { BoardGameId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.BoardGameId, x => x.Count);
+
         // Build result
         var games = uniqueGames
             .Select(gr => new BoardGameOverviewItem
@@ -52,7 +65,9 @@ public class BoardGameOverviewService : IBoardGameOverviewService
                 TimeToSetupMinutes = gr.BoardGameCache?.TimeToSetupMinutes,
                 AveragePlaytimeMinutes = gr.BoardGame.AveragePlaytimeMinutes,
                 HasAiData = gr.BoardGameCache?.HasAiData ?? false,
-                LastUpdatedAt = gr.BoardGameCache?.LastUpdatedAt ?? gr.Registration.CreatedAt
+                LastUpdatedAt = gr.BoardGameCache?.LastUpdatedAt ?? gr.Registration.CreatedAt,
+                AverageRating = averageRatings.ContainsKey(gr.BoardGameId) ? averageRatings[gr.BoardGameId] : null,
+                RatingCount = ratingCounts.GetValueOrDefault(gr.BoardGameId, 0)
             })
             .OrderBy(g => g.GameName)
             .ToList();
