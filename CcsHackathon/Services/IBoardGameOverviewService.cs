@@ -17,5 +17,7 @@ public record BoardGameOverviewItem
     public int? AveragePlaytimeMinutes { get; init; }
     public bool HasAiData { get; init; }
     public DateTime LastUpdatedAt { get; init; }
+    public decimal? AverageRating { get; init; }
+    public int RatingCount { get; init; }
 }
 

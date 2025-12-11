@@ -64,5 +64,27 @@ public class GameRatingService : IGameRatingService
             return newRating;
         }
     }
+
+    public async Task<Dictionary<Guid, decimal>> GetAverageRatingsAsync(IEnumerable<Guid> boardGameIds)
+    {
+        var boardGameIdsList = boardGameIds.ToList();
+        if (!boardGameIdsList.Any())
+        {
+            return new Dictionary<Guid, decimal>();
+        }
+
+        var averageRatings = await _dbContext.GameRatings
+            .Where(r => boardGameIdsList.Contains(r.BoardGameId))
+            .GroupBy(r => r.BoardGameId)
+            .Select(g => new
+            {
+                BoardGameId = g.Key,
+                AverageRating = g.Average(r => (decimal)r.Rating),
+                RatingCount = g.Count()
+            })
+            .ToDictionaryAsync(x => x.BoardGameId, x => x.AverageRating);
+
+        return averageRatings;
+    }
 }
 
