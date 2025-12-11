@@ -2,8 +2,10 @@
 @using System.ComponentModel.DataAnnotations
 @using CcsHackathon.Services
 @using CcsHackathon.Data
+@using Microsoft.EntityFrameworkCore
 @attribute [Authorize]
 @inject ISessionService SessionService
+@inject ApplicationDbContext _dbContext
 @inject ILogger<SessionManagement> Logger
 
 <PageTitle>Session Management</PageTitle>
@@ -66,17 +68,29 @@
                         <thead>
                             <tr>
                                 <th>Session Date</th>
+                                <th>Number of Attendees</th>
                                 <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var session in sessions)
                             {
+                                var attendeeCount = sessionAttendeeCounts.GetValueOrDefault(session.Id, 0);
                                 <tr>
                                     <td class="align-middle">
                                         <strong>@session.Date.ToString("yyyy-MM-dd")</strong>
                                     </td>
+                                    <td class="align-middle">
+                                        <a href="/sessions/@session.Id/attendees" class="text-decoration-none">
+                                            @attendeeCount
+                                        </a>
+                                    </td>
                                     <td class="text-end">
+                                        <a href="/sessions/@session.Id/attendees" 
+                                           class="btn btn-sm btn-outline-primary me-2" 
+                                           title="View Attendees">
+                                            👥 Attendees
+                                        </a>
                                         <button class="btn btn-sm btn-outline-secondary me-2" 
                                                 @onclick="() => EditSession(session)"
                                                 title="Reschedule">
@@ -116,6 +130,7 @@
                             <tr>
                                 <th>Session Date</th>
                                 <th>Number of Attendees</th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -126,7 +141,16 @@
                                         <strong>@sessionWithCount.Session.Date.ToString("yyyy-MM-dd")</strong>
                                     </td>
                                     <td class="align-middle">
-                                        @sessionWithCount.AttendeeCount
+                                        <a href="/sessions/@sessionWithCount.Session.Id/attendees" class="text-decoration-none">
+                                            @sessionWithCount.AttendeeCount
+                                        </a>
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="/sessions/@sessionWithCount.Session.Id/attendees" 
+                                           class="btn btn-sm btn-outline-primary" 
+                                           title="View Attendees">
+                                            👥 Attendees
+                                        </a>
                                     </td>
                                 </tr>
                             }
@@ -156,6 +180,7 @@
                             <tr>
                                 <th>Session Date</th>
                                 <th>Number of Attendees</th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -166,7 +191,16 @@
                                         <strong>@sessionWithCount.Session.Date.ToString("yyyy-MM-dd")</strong>
                                     </td>
                                     <td class="align-middle">
-                                        @sessionWithCount.AttendeeCount
+                                        <a href="/sessions/@sessionWithCount.Session.Id/attendees" class="text-decoration-none">
+                                            @sessionWithCount.AttendeeCount
+                                        </a>
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="/sessions/@sessionWithCount.Session.Id/attendees" 
+                                           class="btn btn-sm btn-outline-primary" 
+                                           title="View Attendees">
+                                            👥 Attendees
+                                        </a>
                                     </td>
                                 </tr>
                             }
@@ -230,6 +264,7 @@
     private List<Session>? sessions;
     private List<SessionWithAttendeeCount>? upcomingSessionsWithCounts;
     private List<SessionWithAttendeeCount>? historicSessionsWithCounts;
+    private Dictionary<Guid, int> sessionAttendeeCounts = new();
     private string createMessage = string.Empty;
     private bool isCreateError = false;
     private bool isCreating = false;
@@ -246,6 +281,36 @@
         try
         {
             sessions = (await SessionService.GetAllSessionsAsync()).ToList();
+            
+            // Load attendee counts for existing sessions
+            if (sessions != null && sessions.Any())
+            {
+                var sessionIds = sessions.Select(s => s.Id).ToList();
+                
+                // Get counts from upcoming and historic sessions
+                var counts = await SessionService.GetUpcomingSessionsWithAttendeeCountAsync();
+                var historicCounts = await SessionService.GetHistoricSessionsWithAttendeeCountAsync();
+                
+                // Build dictionary from both sources
+                var allCounts = counts.Concat(historicCounts).ToList();
+                sessionAttendeeCounts = allCounts.ToDictionary(sc => sc.Session.Id, sc => sc.AttendeeCount);
+                
+                // For any sessions not in the counts, calculate them
+                var missingSessionIds = sessionIds.Where(id => !sessionAttendeeCounts.ContainsKey(id)).ToList();
+                if (missingSessionIds.Any())
+                {
+                    var missingCounts = await _dbContext.Registrations
+                        .Where(r => r.SessionId.HasValue && missingSessionIds.Contains(r.SessionId.Value))
+                        .GroupBy(r => r.SessionId!.Value)
+                        .Select(g => new { SessionId = g.Key, Count = g.Select(r => r.UserId).Distinct().Count() })
+                        .ToDictionaryAsync(x => x.SessionId, x => x.Count);
+                    
+                    foreach (var kvp in missingCounts)
+                    {
+                        sessionAttendeeCounts[kvp.Key] = kvp.Value;
+                    }
+                }
+            }
         }
         catch (Exception ex)
         {

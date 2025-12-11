@@ -99,6 +99,7 @@ builder.Services.AddScoped<IBoardGameOverviewService, BoardGameOverviewService>(
 builder.Services.AddScoped<IBoardGameFaqService, BoardGameFaqService>();
 builder.Services.AddScoped<IGameRatingService, GameRatingService>();
 builder.Services.AddScoped<ISessionHistoryService, SessionHistoryService>();
+builder.Services.AddScoped<ISessionAttendeesService, SessionAttendeesService>();
 
 // Register background service for AI data processing
 builder.Services.AddHostedService<BoardGameAiBackgroundService>();
