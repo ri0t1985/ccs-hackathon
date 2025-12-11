@@ -5,62 +5,64 @@
 @inject ILogger<SearchableBoardGameSelector> Logger
 
 <div class="searchable-select-container position-relative">
-    <div class="input-group">
-        <input type="text" 
-               class="form-control @(IsInvalid ? "is-invalid" : "")" 
-               placeholder="@Placeholder"
-               value="@SearchTerm"
-               @oninput="HandleInput"
-               @onkeydown="HandleKeyDown"
-               @onfocus="HandleFocus"
-               @onblur="HandleBlur" />
-        @if (!string.IsNullOrWhiteSpace(SelectedGameName))
-        {
-            <button type="button" 
-                    class="btn btn-outline-secondary" 
-                    @onclick="ClearSelection"
-                    title="Clear selection">
-                ✕
-            </button>
-        }
-    </div>
-    
-    @if (ShowDropdown && (SearchResults.Any() || ShowCreateOption))
-    {
-        <div class="dropdown-menu show position-absolute w-100" style="max-height: 300px; overflow-y: auto; z-index: 1000;">
-            @{
-                var resultsList = SearchResults.ToList();
-            }
-            @for (int i = 0; i < resultsList.Count; i++)
+    <div class="dropdown @(ShowDropdown && (SearchResults.Any() || ShowCreateOption) ? "show" : "")">
+        <div class="input-group">
+            <input type="text" 
+                   class="form-control @(IsInvalid ? "is-invalid" : "")" 
+                   placeholder="@Placeholder"
+                   value="@SearchTerm"
+                   @oninput="HandleInput"
+                   @onkeydown="HandleKeyDown"
+                   @onfocus="HandleFocus"
+                   @onblur="HandleBlur" />
+            @if (!string.IsNullOrWhiteSpace(SelectedGameName))
             {
-                var game = resultsList[i];
-                var gameIndex = i;
                 <button type="button" 
-                        class="dropdown-item @(SelectedIndex == gameIndex ? "active" : "")"
-                        @onclick="() => SelectGame(game)"
-                        @onmousedown:preventDefault="true"
-                        @onmouseenter="() => SetHoveredIndex(gameIndex)">
-                    @game.Name
-                </button>
-            }
-            @if (ShowCreateOption && !string.IsNullOrWhiteSpace(SearchTerm))
-            {
-                var createIndex = resultsList.Count;
-                <div class="dropdown-divider"></div>
-                <button type="button" 
-                        class="dropdown-item text-primary fw-bold @(SelectedIndex == createIndex ? "active" : "")"
-                        @onclick="CreateNewGame"
-                        @onmousedown:preventDefault="true"
-                        @onmouseenter="() => SetHoveredIndex(createIndex)">
-                    + Add new game: "@SearchTerm"
+                        class="btn btn-outline-secondary" 
+                        @onclick="ClearSelection"
+                        title="Clear selection">
+                    ✕
                 </button>
             }
         </div>
-    }
+        
+        @if (ShowDropdown && (SearchResults.Any() || ShowCreateOption))
+        {
+            <div class="dropdown-menu show position-absolute w-100" style="max-height: 300px; overflow-y: auto; z-index: 1050; top: 100%; left: 0; margin-top: 0.125rem;">
+                @{
+                    var resultsList = SearchResults.ToList();
+                }
+                @for (int i = 0; i < resultsList.Count; i++)
+                {
+                    var game = resultsList[i];
+                    var gameIndex = i;
+                    <button type="button" 
+                            class="dropdown-item @(SelectedIndex == gameIndex ? "active" : "")"
+                            @onclick="() => SelectGame(game)"
+                            @onmousedown:preventDefault="true"
+                            @onmouseenter="() => SetHoveredIndex(gameIndex)">
+                        @game.Name
+                    </button>
+                }
+                @if (ShowCreateOption && !string.IsNullOrWhiteSpace(SearchTerm))
+                {
+                    var createIndex = resultsList.Count;
+                    <div class="dropdown-divider"></div>
+                    <button type="button" 
+                            class="dropdown-item text-primary fw-bold @(SelectedIndex == createIndex ? "active" : "")"
+                            @onclick="CreateNewGame"
+                            @onmousedown:preventDefault="true"
+                            @onmouseenter="() => SetHoveredIndex(createIndex)">
+                        + Add new game: "@SearchTerm"
+                    </button>
+                }
+            </div>
+        }
+    </div>
     
     @if (IsLoading)
     {
-        <div class="position-absolute end-0 top-50 translate-middle-y me-2">
+        <div class="position-absolute end-0 top-50 translate-middle-y" style="right: 0.5rem; z-index: 10;">
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
         </div>
     }
