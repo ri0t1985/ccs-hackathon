@@ -1,0 +1,88 @@
+.multiselect-board-game-container {
+    width: 100%;
+}
+
+.multiselect-board-game-container .dropdown {
+    width: 100%;
+}
+
+.multiselect-board-game-container .selected-games-container {
+    min-height: 2.5rem;
+    padding: 0.5rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    background-color: #f8f9fa;
+}
+
+.multiselect-board-game-container .dropdown-menu {
+    display: block;
+    width: 100%;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 0.375rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    background-color: #fff;
+}
+
+.multiselect-board-game-container .dropdown-menu.show {
+    display: block;
+}
+
+.multiselect-board-game-container .dropdown-header {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #6c757d;
+    text-transform: uppercase;
+}
+
+.multiselect-board-game-container .dropdown-item {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+}
+
+.multiselect-board-game-container .dropdown-item:hover:not(.disabled),
+.multiselect-board-game-container .dropdown-item.active:not(.disabled) {
+    background-color: #f8f9fa;
+    color: #212529;
+}
+
+.multiselect-board-game-container .dropdown-item.active:not(.disabled) {
+    background-color: #0d6efd;
+    color: #fff;
+}
+
+.multiselect-board-game-container .dropdown-item.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.multiselect-board-game-container .dropdown-divider {
+    height: 0;
+    margin: 0.5rem 0;
+    overflow: hidden;
+    border-top: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.multiselect-board-game-container .input-group {
+    position: relative;
+}
+
+.multiselect-board-game-container .badge {
+    display: inline-flex;
+    align-items: center;
+    cursor: default;
+}
+
+.multiselect-board-game-container .badge .btn-close {
+    margin-left: 0.25rem;
+    opacity: 0.8;
+}
+
+.multiselect-board-game-container .badge .btn-close:hover {
+    opacity: 1;
+}
+

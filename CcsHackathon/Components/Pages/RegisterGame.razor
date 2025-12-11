@@ -37,33 +37,15 @@
                             <tr>
                                 <td class="align-top" style="width: 30%;">
                                     <label class="form-label fw-bold mb-0">Board Games</label>
-                                    <p class="text-muted small mb-0">Add one or more board games</p>
+                                    <p class="text-muted small mb-0">Select one or more board games</p>
                                 </td>
                                 <td>
-                                    <div class="border rounded p-3 bg-light">
-                                        @for (int i = 0; i < registrationModel.Games.Count; i++)
-                                        {
-                                            var index = i;
-                                            <div class="input-group mb-2">
-                                                <InputText class="form-control" 
-                                                           placeholder="Enter board game name" 
-                                                           @bind-Value="registrationModel.Games[index]" />
-                                                <button type="button" 
-                                                        class="btn btn-outline-danger" 
-                                                        @onclick="() => RemoveGame(index)"
-                                                        disabled="@(registrationModel.Games.Count <= 1)">
-                                                    Remove
-                                                </button>
-                                            </div>
-                                        }
-                                        
-                                        <button type="button" 
-                                                class="btn btn-outline-secondary btn-sm" 
-                                                @onclick="AddGame">
-                                            + Add Another Game
-                                        </button>
-                                    </div>
-                                    <ValidationMessage For="@(() => registrationModel.Games)" />
+                                    <MultiSelectBoardGameSelector 
+                                        SelectedGameIds="@registrationModel.GameIds"
+                                        SelectedGameIdsChanged="@OnGamesChanged"
+                                        Placeholder="Search board games..."
+                                        IsInvalid="@(!registrationModel.GameIds.Any())" />
+                                    <ValidationMessage For="@(() => registrationModel.GameIds)" />
                                 </td>
                             </tr>
                             <tr>
@@ -140,8 +122,8 @@
     {
         // Pre-fill name from user context
         registrationModel.Name = UserContext.DisplayName;
-        // Start with one empty game field
-        registrationModel.Games.Add(string.Empty);
+        // Start with empty game list
+        registrationModel.GameIds = new List<Guid>();
         
         // Load only upcoming (non-past) sessions
         try
@@ -170,7 +152,7 @@
             return false;
             
         // Check if at least one game is provided
-        var hasGames = registrationModel.Games.Any(g => !string.IsNullOrWhiteSpace(g));
+        var hasGames = registrationModel.GameIds.Any();
         if (!hasGames)
             return false;
             
@@ -192,17 +174,9 @@
         isError = true;
     }
 
-    private void AddGame()
+    private void OnGamesChanged(List<Guid> gameIds)
     {
-        registrationModel.Games.Add(string.Empty);
-    }
-
-    private void RemoveGame(int index)
-    {
-        if (registrationModel.Games.Count > 1)
-        {
-            registrationModel.Games.RemoveAt(index);
-        }
+        registrationModel.GameIds = gameIds;
     }
 
     private async Task HandleValidSubmit()
@@ -240,13 +214,7 @@
                 return;
             }
 
-            // Filter out empty game names
-            var gameNames = registrationModel.Games
-                .Where(g => !string.IsNullOrWhiteSpace(g))
-                .Select(g => g.Trim())
-                .ToList();
-
-            if (gameNames.Count == 0)
+            if (registrationModel.GameIds.Count == 0)
             {
                 message = "Please add at least one board game.";
                 isError = true;
@@ -260,18 +228,18 @@
                 string.IsNullOrWhiteSpace(registrationModel.FoodRequirements) 
                     ? null 
                     : registrationModel.FoodRequirements.Trim(),
-                gameNames,
+                registrationModel.GameIds,
                 registrationModel.SessionId
             );
 
-            message = $"Thank you, {registrationModel.Name}! Your registration for {gameNames.Count} game(s) has been saved successfully.";
+            message = $"Thank you, {registrationModel.Name}! Your registration for {registrationModel.GameIds.Count} game(s) has been saved successfully.";
             
             // Reset form
             registrationModel = new RegistrationModel
             {
-                Name = UserContext.DisplayName
+                Name = UserContext.DisplayName,
+                GameIds = new List<Guid>()
             };
-            registrationModel.Games.Add(string.Empty);
             registrationModel.SessionId = null;
         }
         catch (Exception ex)
@@ -290,7 +258,7 @@
         [Required(ErrorMessage = "Name is required")]
         public string Name { get; set; } = string.Empty;
 
-        public List<string> Games { get; set; } = new();
+        public List<Guid> GameIds { get; set; } = new();
 
         public string? FoodRequirements { get; set; }
         
