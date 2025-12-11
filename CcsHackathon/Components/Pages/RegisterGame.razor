@@ -11,6 +11,19 @@
 <PageTitle>Register Game</PageTitle>
 
 <div class="container mt-4">
+    @if (nextUpcomingSession != null)
+    {
+        <div class="alert alert-info mb-3" role="alert">
+            <div class="d-flex align-items-center">
+                <span class="bi bi-calendar-event me-2" style="font-size: 1.25rem;"></span>
+                <div>
+                    <strong>Next Upcoming Session:</strong> 
+                    <span>@nextUpcomingSession.Date.ToString("dddd, MMMM dd, yyyy")</span>
+                </div>
+            </div>
+        </div>
+    }
+    
     <div class="card shadow-sm">
         <div class="card-header bg-primary text-white">
             <h2 class="mb-0">Register Your Games</h2>
@@ -117,6 +130,7 @@
     private bool isSubmitting = false;
     private bool isError = false;
     private List<Session>? upcomingSessions;
+    private Session? nextUpcomingSession;
 
     protected override async Task OnInitializedAsync()
     {
@@ -134,11 +148,15 @@
                 .Where(s => !s.IsCancelled && s.Date >= today)
                 .OrderBy(s => s.Date)
                 .ToList();
+            
+            // Get the next upcoming session for the header
+            nextUpcomingSession = upcomingSessions.FirstOrDefault();
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading sessions");
             upcomingSessions = new List<Session>();
+            nextUpcomingSession = null;
         }
     }
     
