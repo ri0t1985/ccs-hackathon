@@ -161,6 +161,7 @@ using (var scope = app.Services.CreateScope())
                 await dbContext.BoardGameConversationMessages.CountAsync();
                 await dbContext.GameRatings.CountAsync();
                 await dbContext.BoardGameMetadata.CountAsync();
+                await dbContext.SessionGameInterests.CountAsync();
                 
                 // Try to access a newer column to ensure it exists
                 // If FoodRequirements or AI fields don't exist, this will fail
