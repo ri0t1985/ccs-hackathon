@@ -87,6 +87,7 @@
                                     <tr>
                                         <th>Game Name</th>
                                         <th>Your Rating</th>
+                                        <th>Average Rating</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -124,7 +125,34 @@
                                                     {
                                                         <span class="ms-2 text-muted small">(@game.UserRating.Value / 5)</span>
                                                     }
+                                                    else
+                                                    {
+                                                        <span class="ms-2 text-muted small">(Not rated)</span>
+                                                    }
                                                 </div>
+                                            </td>
+                                            <td>
+                                                @if (game.AverageRating.HasValue)
+                                                {
+                                                    <div>
+                                                        <div class="star-rating-display">
+                                                            @((MarkupString)RenderStarRating(game.AverageRating.Value))
+                                                        </div>
+                                                        <div class="mt-1">
+                                                            <span class="text-muted small">
+                                                                <strong>@game.AverageRating.Value.ToString("F1")</strong> / 5.0
+                                                                @if (game.RatingCount > 0)
+                                                                {
+                                                                    <text> (@game.RatingCount @(game.RatingCount == 1 ? "rating" : "ratings"))</text>
+                                                                }
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">No ratings yet</span>
+                                                }
                                             </td>
                                         </tr>
                                     }
@@ -157,6 +185,20 @@
     }
     
     .star.active {
+        color: #ffc107;
+    }
+    
+    .star-rating-display {
+        display: inline-flex;
+        gap: 2px;
+        font-size: 1.2rem;
+    }
+    
+    .star-rating-display .star {
+        color: #ccc;
+    }
+    
+    .star-rating-display .star.active {
         color: #ffc107;
     }
 </style>
@@ -241,6 +283,28 @@
         toDate = null;
         gameNameFilter = string.Empty;
         _ = LoadSessionsAsync();
+    }
+
+    private string RenderStarRating(decimal value, decimal maxValue = 5.0m)
+    {
+        var fullStars = (int)Math.Floor(value);
+        var hasHalfStar = value % 1 >= 0.5m;
+        var emptyStars = (int)maxValue - fullStars - (hasHalfStar ? 1 : 0);
+        
+        var html = "";
+        for (int i = 0; i < fullStars; i++)
+        {
+            html += "<span class=\"star active\">★</span>";
+        }
+        if (hasHalfStar)
+        {
+            html += "<span class=\"star active\" style=\"opacity: 0.5;\">★</span>";
+        }
+        for (int i = 0; i < emptyStars; i++)
+        {
+            html += "<span class=\"star\">☆</span>";
+        }
+        return html;
     }
 }
 
