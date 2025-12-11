@@ -61,10 +61,10 @@ public class GameRecommendationService : IGameRecommendationService
                 {
                     Game = g,
                     UserRating = userRatings[g.Id],
-                    AverageRating = averageRatings.GetValueOrDefault(g.Id)
+                    AverageRating = averageRatings.ContainsKey(g.Id) ? averageRatings[g.Id] : (decimal?)null
                 })
                 .OrderByDescending(x => x.UserRating)
-                .ThenByDescending(x => x.AverageRating.HasValue ? x.AverageRating.Value : 0m)
+                .ThenByDescending(x => x.AverageRating ?? 0m)
                 .Take(3)
                 .Select(x => new RecommendedGame
                 {
