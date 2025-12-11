@@ -13,6 +13,7 @@ public class ApplicationDbContext : DbContext
         public DbSet<GameRegistration> GameRegistrations { get; set; }
         public DbSet<BoardGameCache> BoardGameCaches { get; set; }
         public DbSet<BoardGame> BoardGames { get; set; }
+        public DbSet<BoardGameMetadata> BoardGameMetadata { get; set; }
         public DbSet<Session> Sessions { get; set; }
         public DbSet<BoardGameFaqCache> BoardGameFaqCaches { get; set; }
         public DbSet<BoardGameConversation> BoardGameConversations { get; set; }
@@ -204,6 +205,25 @@ public class ApplicationDbContext : DbContext
             
             // Unique constraint: one rating per user per game per session
             entity.HasIndex(e => new { e.UserId, e.BoardGameId, e.SessionId }).IsUnique();
+        });
+
+        // Configure BoardGameMetadata entity
+        modelBuilder.Entity<BoardGameMetadata>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.BoardGameId).IsRequired();
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.LastUpdatedAt).IsRequired();
+            entity.Property(e => e.ReplayabilityScore).IsRequired(false);
+            
+            // Configure one-to-one relationship: BoardGameMetadata -> BoardGame
+            entity.HasOne(e => e.BoardGame)
+                .WithOne(bg => bg.Metadata)
+                .HasForeignKey<BoardGameMetadata>(e => e.BoardGameId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            // Ensure one metadata record per board game
+            entity.HasIndex(e => e.BoardGameId).IsUnique();
         });
     }
 }
