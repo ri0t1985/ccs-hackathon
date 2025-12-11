@@ -32,8 +32,9 @@
         <div class="col-md-4">
             <label for="gameNameFilter" class="form-label">Filter by Game Name</label>
             <InputText id="gameNameFilter" class="form-control" 
-                       @bind="gameNameFilter" 
-                       @bind:event="oninput"
+                       Value="@gameNameFilter" 
+                       ValueChanged="@((string value) => { gameNameFilter = value; _ = LoadSessionsAsync(); })"
+                       ValueExpression="@(() => gameNameFilter)"
                        placeholder="Enter game name..." />
         </div>
         <div class="col-md-2 d-flex align-items-end">
