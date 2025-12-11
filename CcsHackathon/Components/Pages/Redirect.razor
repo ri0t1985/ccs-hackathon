@@ -7,15 +7,8 @@
 @code {
     protected override void OnInitialized()
     {
-        // Redirect based on authentication status
-        if (UserContext.IsAuthenticated)
-        {
-            Navigation.NavigateTo("/register-game", forceLoad: true);
-        }
-        else
-        {
-            Navigation.NavigateTo("/login", forceLoad: true);
-        }
+        // Always redirect to register game page (login and dashboard hidden from menu)
+        Navigation.NavigateTo("/register-game", forceLoad: true);
     }
 }
 
