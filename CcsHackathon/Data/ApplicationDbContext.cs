@@ -19,6 +19,7 @@ public class ApplicationDbContext : DbContext
         public DbSet<BoardGameConversation> BoardGameConversations { get; set; }
         public DbSet<BoardGameConversationMessage> BoardGameConversationMessages { get; set; }
         public DbSet<GameRating> GameRatings { get; set; }
+        public DbSet<SessionGameInterest> SessionGameInterests { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

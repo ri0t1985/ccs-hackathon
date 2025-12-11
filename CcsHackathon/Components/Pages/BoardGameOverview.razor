@@ -5,6 +5,7 @@
 @inject IBoardGameOverviewService BoardGameOverviewService
 @inject ISessionService SessionService
 @inject IBoardGameFaqService BoardGameFaqService
+@inject ISessionGameInterestService SessionGameInterestService
 @inject IUserContext UserContext
 @inject ILogger<BoardGameOverview> Logger
 
@@ -167,6 +168,33 @@
                                         Ask Question
                                     </button>
                                 </div>
+                                @if (game.IsUpcomingSession)
+                                {
+                                    <div class="mt-2">
+                                        @if (game.UserHasInterest)
+                                        {
+                                            <button class="btn btn-sm btn-success" 
+                                                    @onclick="() => ToggleInterest(game)"
+                                                    disabled="@isTogglingInterest">
+                                                <span class="me-1">✓</span> You want to play this
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-sm btn-outline-success" 
+                                                    @onclick="() => ToggleInterest(game)"
+                                                    disabled="@isTogglingInterest">
+                                                I want to play this
+                                            </button>
+                                        }
+                                        @if (game.InterestCount > 0)
+                                        {
+                                            <span class="ms-2 text-muted small">
+                                                (@game.InterestCount @(game.InterestCount == 1 ? "person" : "people") interested)
+                                            </span>
+                                        }
+                                    </div>
+                                }
                             </td>
                         </tr>
                     }
@@ -350,6 +378,9 @@
     private string customQuestion = string.Empty;
     private bool isLoadingFaqResponse = false;
     private List<string> commonQuestions = new();
+    
+    // Interest state
+    private bool isTogglingInterest = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -384,7 +415,7 @@
         try
         {
             // Fetch games data for the selected session only
-            games = await BoardGameOverviewService.GetBoardGamesAsync(selectedSessionId);
+            games = await BoardGameOverviewService.GetBoardGamesAsync(selectedSessionId, UserContext?.UserId);
             ApplySorting();
             
             // Force UI update
@@ -718,6 +749,58 @@
         currentConversationId = null;
         followUpQuestion = string.Empty;
         isLoadingFaqResponse = false;
+        StateHasChanged();
+    }
+
+    private async Task ToggleInterest(BoardGameOverviewItem game)
+    {
+        if (!selectedSessionId.HasValue || UserContext == null || string.IsNullOrWhiteSpace(UserContext.UserId))
+        {
+            Logger.LogError("Cannot toggle interest: missing session ID or user context");
+            return;
+        }
+
+        if (!game.IsUpcomingSession)
+        {
+            Logger.LogWarning("Cannot toggle interest for historical session");
+            return;
+        }
+
+        isTogglingInterest = true;
+        StateHasChanged();
+
+        try
+        {
+            if (game.UserHasInterest)
+            {
+                // Remove interest
+                await SessionGameInterestService.RemoveInterestAsync(
+                    UserContext.UserId, 
+                    selectedSessionId.Value, 
+                    game.BoardGameId);
+            }
+            else
+            {
+                // Add interest
+                await SessionGameInterestService.AddInterestAsync(
+                    UserContext.UserId, 
+                    selectedSessionId.Value, 
+                    game.BoardGameId);
+            }
+
+            // Reload games to update interest counts and user interest status
+            await LoadGamesAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error toggling interest for game {GameId} in session {SessionId}", 
+                game.BoardGameId, selectedSessionId.Value);
+        }
+        finally
+        {
+            isTogglingInterest = false;
+            StateHasChanged();
+        }
     }
 }
 
