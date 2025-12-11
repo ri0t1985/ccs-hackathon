@@ -143,7 +143,9 @@ public class BoardGameAiBackgroundService : BackgroundService
         try
         {
             // Update BoardGame entity with AI data
-            var boardGame = await dbContext.BoardGames.FindAsync(new object[] { boardGameId }, cancellationToken);
+            var boardGame = await dbContext.BoardGames
+                .Include(bg => bg.Metadata)
+                .FirstOrDefaultAsync(bg => bg.Id == boardGameId, cancellationToken);
             if (boardGame != null)
             {
                 boardGame.SetupComplexity = aiData.Complexity;
@@ -151,6 +153,31 @@ public class BoardGameAiBackgroundService : BackgroundService
                 boardGame.Description = aiData.Summary;
                 boardGame.AveragePlaytimeMinutes = aiData.AveragePlaytimeMinutes;
                 boardGame.LastUpdatedAt = DateTime.UtcNow;
+                
+                // Update or create metadata (idempotent - only if it doesn't exist)
+                if (boardGame.Metadata == null)
+                {
+                    var metadata = new BoardGameMetadata
+                    {
+                        Id = Guid.NewGuid(),
+                        BoardGameId = boardGameId,
+                        GameType = aiData.GameType,
+                        Theme = aiData.Theme,
+                        PlayerInteractionLevel = aiData.PlayerInteractionLevel,
+                        SkillRequirements = aiData.SkillRequirements,
+                        RandomnessLevel = aiData.RandomnessLevel,
+                        ComplexityTier = aiData.ComplexityTier,
+                        TargetAudience = aiData.TargetAudience,
+                        ReplayabilityScore = aiData.ReplayabilityScore,
+                        LearningCurve = aiData.LearningCurve,
+                        TypicalPlayStyle = aiData.TypicalPlayStyle,
+                        CreatedAt = DateTime.UtcNow,
+                        LastUpdatedAt = DateTime.UtcNow
+                    };
+                    dbContext.BoardGameMetadata.Add(metadata);
+                    boardGame.Metadata = metadata;
+                }
+                // If metadata exists, skip update (idempotent behavior)
             }
 
             // Update or create BoardGameCache

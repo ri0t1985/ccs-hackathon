@@ -14,5 +14,6 @@ public class BoardGame
     // Navigation properties
     public ICollection<GameRegistration> GameRegistrations { get; set; } = new List<GameRegistration>();
     public ICollection<BoardGameCache> BoardGameCaches { get; set; } = new List<BoardGameCache>();
+    public BoardGameMetadata? Metadata { get; set; }
 }
 

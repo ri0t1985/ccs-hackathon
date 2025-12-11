@@ -49,7 +49,17 @@ public class BoardGameAiService : IBoardGameAiService
   ""complexity"": <a decimal number from 1.0 to 5.0 representing game complexity, where 1.0 is very simple and 5.0 is very complex>,
   ""timeToSetupMinutes"": <an integer representing the estimated time in minutes to set up the game>,
   ""averagePlaytimeMinutes"": <an integer representing the average play time in minutes for a typical game session>,
-  ""summary"": ""<a brief 2-3 sentence summary of the game, its mechanics, and what makes it interesting>""
+  ""summary"": ""<a brief 2-3 sentence summary of the game, its mechanics, and what makes it interesting>"",
+  ""gameType"": ""<game type/genre such as Strategy, Party, Cooperative, Deck-builder, Worker placement, Abstract, Dungeon crawler, etc.>"",
+  ""theme"": ""<theme such as Fantasy, Sci-fi, Horror, Historical, Economic, Exploration, etc.>"",
+  ""playerInteractionLevel"": ""<Low, Medium, or High>"",
+  ""skillRequirements"": ""<comma-separated list of skills such as Planning, Negotiation, Bluffing, Pattern recognition, etc.>"",
+  ""randomnessLevel"": ""<Low, Medium, or High>"",
+  ""complexityTier"": ""<Light, Medium, or Heavy>"",
+  ""targetAudience"": ""<Casual players, Families, Hardcore gamers, or combination>"",
+  ""replayabilityScore"": <an integer from 1 to 10 representing replayability>,
+  ""learningCurve"": ""<Easy, Moderate, or Steep>"",
+  ""typicalPlayStyle"": ""<Competitive, Cooperative, Team-based, Solo-friendly, or combination>""
 }}
 
 Only return valid JSON, no additional text or markdown formatting.";
@@ -65,7 +75,7 @@ Only return valid JSON, no additional text or markdown formatting.";
                 Messages = messages,
                 Model = Models.Gpt_3_5_Turbo,
                 Temperature = 0.3f,
-                MaxTokens = 500
+                MaxTokens = 1000
             });
 
             if (!completionResult.Successful)
@@ -117,8 +127,14 @@ Only return valid JSON, no additional text or markdown formatting.";
                 aiData.AveragePlaytimeMinutes = 0;
             }
 
-            _logger.LogInformation("Successfully generated AI data for game: {GameName}. Complexity: {Complexity}, Setup Time: {SetupTime}min, Playtime: {Playtime}min", 
-                gameName, aiData.Complexity, aiData.TimeToSetupMinutes, aiData.AveragePlaytimeMinutes);
+            if (aiData.ReplayabilityScore.HasValue && (aiData.ReplayabilityScore < 1 || aiData.ReplayabilityScore > 10))
+            {
+                _logger.LogWarning("Invalid replayability score {Score} for game {GameName}. Clamping to valid range.", aiData.ReplayabilityScore, gameName);
+                aiData.ReplayabilityScore = Math.Clamp(aiData.ReplayabilityScore.Value, 1, 10);
+            }
+
+            _logger.LogInformation("Successfully generated AI data for game: {GameName}. Complexity: {Complexity}, Setup Time: {SetupTime}min, Playtime: {Playtime}min, Type: {GameType}", 
+                gameName, aiData.Complexity, aiData.TimeToSetupMinutes, aiData.AveragePlaytimeMinutes, aiData.GameType ?? "Unknown");
 
             return aiData;
         }

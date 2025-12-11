@@ -157,6 +157,7 @@ using (var scope = app.Services.CreateScope())
                 await dbContext.BoardGameConversations.CountAsync();
                 await dbContext.BoardGameConversationMessages.CountAsync();
                 await dbContext.GameRatings.CountAsync();
+                await dbContext.BoardGameMetadata.CountAsync();
                 
                 // Try to access a newer column to ensure it exists
                 // If FoodRequirements or AI fields don't exist, this will fail
@@ -170,6 +171,10 @@ using (var scope = app.Services.CreateScope())
                 
                 var testBoardGameQuery = await dbContext.BoardGames
                     .Select(bg => new { bg.Id, bg.Name, bg.Description, bg.SetupComplexity, bg.Score, bg.AveragePlaytimeMinutes })
+                    .FirstOrDefaultAsync();
+                
+                var testMetadataQuery = await dbContext.BoardGameMetadata
+                    .Select(m => new { m.Id, m.BoardGameId, m.GameType, m.Theme, m.PlayerInteractionLevel, m.SkillRequirements, m.RandomnessLevel, m.ComplexityTier, m.TargetAudience, m.ReplayabilityScore, m.LearningCurve, m.TypicalPlayStyle })
                     .FirstOrDefaultAsync();
                 
                 // Check if migration from GameId to BoardGameId is needed
