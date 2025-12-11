@@ -37,34 +37,14 @@
                             <tr>
                                 <td class="align-top" style="width: 30%;">
                                     <label class="form-label fw-bold mb-0">Board Games</label>
-                                    <p class="text-muted small mb-0">Add one or more board games</p>
+                                    <p class="text-muted small mb-0">Select one or more board games</p>
                                 </td>
                                 <td>
-                                    <div class="border rounded p-3 bg-light">
-                                        @for (int i = 0; i < registrationModel.GameIds.Count; i++)
-                                        {
-                                            var index = i;
-                                            <div class="mb-2">
-                                                <SearchableBoardGameSelector 
-                                                    SelectedGameId="@registrationModel.GameIds[index]"
-                                                    SelectedGameIdChanged="@((Guid? id) => OnGameSelected(index, id))"
-                                                    Placeholder="Search board games..."
-                                                    IsInvalid="@(registrationModel.GameIds[index] == null && registrationModel.GameIds.Count > 0)" />
-                                                <button type="button" 
-                                                        class="btn btn-outline-danger btn-sm mt-1" 
-                                                        @onclick="() => RemoveGame(index)"
-                                                        disabled="@(registrationModel.GameIds.Count <= 1)">
-                                                    Remove
-                                                </button>
-                                            </div>
-                                        }
-                                        
-                                        <button type="button" 
-                                                class="btn btn-outline-secondary btn-sm" 
-                                                @onclick="AddGame">
-                                            + Add Another Game
-                                        </button>
-                                    </div>
+                                    <MultiSelectBoardGameSelector 
+                                        SelectedGameIds="@registrationModel.GameIds"
+                                        SelectedGameIdsChanged="@OnGamesChanged"
+                                        Placeholder="Search board games..."
+                                        IsInvalid="@(!registrationModel.GameIds.Any())" />
                                     <ValidationMessage For="@(() => registrationModel.GameIds)" />
                                 </td>
                             </tr>
@@ -142,8 +122,8 @@
     {
         // Pre-fill name from user context
         registrationModel.Name = UserContext.DisplayName;
-        // Start with one empty game field
-        registrationModel.GameIds.Add(null);
+        // Start with empty game list
+        registrationModel.GameIds = new List<Guid>();
         
         // Load only upcoming (non-past) sessions
         try
@@ -172,7 +152,7 @@
             return false;
             
         // Check if at least one game is provided
-        var hasGames = registrationModel.GameIds.Any(id => id.HasValue);
+        var hasGames = registrationModel.GameIds.Any();
         if (!hasGames)
             return false;
             
@@ -194,25 +174,9 @@
         isError = true;
     }
 
-    private void AddGame()
+    private void OnGamesChanged(List<Guid> gameIds)
     {
-        registrationModel.GameIds.Add(null);
-    }
-
-    private void RemoveGame(int index)
-    {
-        if (registrationModel.GameIds.Count > 1)
-        {
-            registrationModel.GameIds.RemoveAt(index);
-        }
-    }
-
-    private void OnGameSelected(int index, Guid? gameId)
-    {
-        if (index >= 0 && index < registrationModel.GameIds.Count)
-        {
-            registrationModel.GameIds[index] = gameId;
-        }
+        registrationModel.GameIds = gameIds;
     }
 
     private async Task HandleValidSubmit()
@@ -250,13 +214,7 @@
                 return;
             }
 
-            // Filter out null game IDs
-            var gameIds = registrationModel.GameIds
-                .Where(id => id.HasValue)
-                .Select(id => id!.Value)
-                .ToList();
-
-            if (gameIds.Count == 0)
+            if (registrationModel.GameIds.Count == 0)
             {
                 message = "Please add at least one board game.";
                 isError = true;
@@ -270,18 +228,18 @@
                 string.IsNullOrWhiteSpace(registrationModel.FoodRequirements) 
                     ? null 
                     : registrationModel.FoodRequirements.Trim(),
-                gameIds,
+                registrationModel.GameIds,
                 registrationModel.SessionId
             );
 
-            message = $"Thank you, {registrationModel.Name}! Your registration for {gameIds.Count} game(s) has been saved successfully.";
+            message = $"Thank you, {registrationModel.Name}! Your registration for {registrationModel.GameIds.Count} game(s) has been saved successfully.";
             
             // Reset form
             registrationModel = new RegistrationModel
             {
-                Name = UserContext.DisplayName
+                Name = UserContext.DisplayName,
+                GameIds = new List<Guid>()
             };
-            registrationModel.GameIds.Add(null);
             registrationModel.SessionId = null;
         }
         catch (Exception ex)
@@ -300,7 +258,7 @@
         [Required(ErrorMessage = "Name is required")]
         public string Name { get; set; } = string.Empty;
 
-        public List<Guid?> GameIds { get; set; } = new();
+        public List<Guid> GameIds { get; set; } = new();
 
         public string? FoodRequirements { get; set; }
         

@@ -28,6 +28,14 @@ public class BoardGameService : IBoardGameService
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<BoardGame>> GetRecentBoardGamesAsync(int count = 5)
+    {
+        return await _dbContext.BoardGames
+            .OrderByDescending(bg => bg.CreatedAt)
+            .Take(count)
+            .ToListAsync();
+    }
+
     public async Task<BoardGame?> GetBoardGameByIdAsync(Guid id)
     {
         return await _dbContext.BoardGames
