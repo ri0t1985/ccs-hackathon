@@ -1,0 +1,246 @@
+@page "/sessions/history"
+@using CcsHackathon.Services
+@using CcsHackathon.Data
+@attribute [Authorize]
+@inject ISessionHistoryService SessionHistoryService
+@inject IGameRatingService GameRatingService
+@inject IUserContext UserContext
+@inject ILogger<SessionHistory> Logger
+
+<PageTitle>Session History</PageTitle>
+
+<div class="container mt-4">
+    <h2>Past Game Sessions</h2>
+    <p class="text-muted">View and rate games from past sessions</p>
+    
+    @* Filters *@
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <label for="fromDate" class="form-label">From Date</label>
+            <InputDate TValue="DateOnly?" id="fromDate" class="form-control" 
+                       Value="@fromDate" 
+                       ValueChanged="@((DateOnly? value) => { fromDate = value; _ = LoadSessionsAsync(); })"
+                       ValueExpression="@(() => fromDate)" />
+        </div>
+        <div class="col-md-3">
+            <label for="toDate" class="form-label">To Date</label>
+            <InputDate TValue="DateOnly?" id="toDate" class="form-control" 
+                       Value="@toDate" 
+                       ValueChanged="@((DateOnly? value) => { toDate = value; _ = LoadSessionsAsync(); })"
+                       ValueExpression="@(() => toDate)" />
+        </div>
+        <div class="col-md-4">
+            <label for="gameNameFilter" class="form-label">Filter by Game Name</label>
+            <InputText id="gameNameFilter" class="form-control" 
+                       Value="@gameNameFilter" 
+                       ValueChanged="@((string value) => { gameNameFilter = value; _ = LoadSessionsAsync(); })"
+                       ValueExpression="@(() => gameNameFilter)"
+                       placeholder="Enter game name..." />
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button class="btn btn-secondary w-100" @onclick="ClearFilters">Clear</button>
+        </div>
+    </div>
+    
+    @if (sessions == null)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading session history...</p>
+        </div>
+    }
+    else if (!sessions.Any())
+    {
+        <div class="alert alert-info" role="alert">
+            <strong>No past sessions found.</strong> Sessions will appear here after they have passed.
+        </div>
+    }
+    else
+    {
+        @foreach (var sessionItem in sessions)
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h5 class="mb-0">
+                                <strong>@sessionItem.Session.Date.ToString("yyyy-MM-dd")</strong>
+                            </h5>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <span class="badge bg-primary">@sessionItem.AttendeeCount attendee(s)</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (!sessionItem.Games.Any())
+                    {
+                        <p class="text-muted mb-0">No games registered for this session.</p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Game Name</th>
+                                        <th>Your Rating</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var game in sessionItem.Games)
+                                    {
+                                        var gameKey = $"{game.BoardGameId}_{sessionItem.Session.Id}";
+                                        var currentRating = game.UserRating ?? 0;
+                                        var hoverRating = (hoveredGameId == gameKey) ? hoveredRating : null;
+                                        var displayRating = hoverRating ?? currentRating;
+                                        
+                                        <tr>
+                                            <td><strong>@game.GameName</strong></td>
+                                            <td>
+                                                <div class="star-rating">
+                                                    @for (int i = 1; i <= 5; i++)
+                                                    {
+                                                        var starValue = i;
+                                                        var isActive = displayRating >= starValue;
+                                                        <span class="star @(isActive ? "active" : "")" 
+                                                              data-rating="@starValue"
+                                                              @onclick="() => RateGame(game.BoardGameId, sessionItem.Session.Id, starValue)"
+                                                              @onmouseover="() => HoverRating(game.BoardGameId, sessionItem.Session.Id, starValue)"
+                                                              @onmouseout="() => ClearHover(game.BoardGameId, sessionItem.Session.Id)">
+                                                            @if (isActive)
+                                                            {
+                                                                <text>★</text>
+                                                            }
+                                                            else
+                                                            {
+                                                                <text>☆</text>
+                                                            }
+                                                        </span>
+                                                    }
+                                                    @if (game.UserRating.HasValue)
+                                                    {
+                                                        <span class="ms-2 text-muted small">(@game.UserRating.Value / 5)</span>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<style>
+    .star-rating {
+        display: inline-flex;
+        gap: 2px;
+        font-size: 1.5rem;
+        cursor: pointer;
+    }
+    
+    .star {
+        color: #ccc;
+        transition: color 0.2s;
+    }
+    
+    .star:hover,
+    .star.hover {
+        color: #ffc107;
+    }
+    
+    .star.active {
+        color: #ffc107;
+    }
+</style>
+
+@code {
+    private IEnumerable<SessionHistoryItem>? sessions;
+    private DateOnly? fromDate;
+    private DateOnly? toDate;
+    private string gameNameFilter = string.Empty;
+    private string? hoveredGameId;
+    private int? hoveredRating;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (UserContext == null || string.IsNullOrWhiteSpace(UserContext.UserId))
+        {
+            Logger.LogError("UserContext or UserId is null when loading session history");
+            return;
+        }
+
+        await LoadSessionsAsync();
+    }
+
+    private async Task LoadSessionsAsync()
+    {
+        if (UserContext == null || string.IsNullOrWhiteSpace(UserContext.UserId))
+            return;
+
+        try
+        {
+            sessions = await SessionHistoryService.GetSessionHistoryAsync(
+                UserContext.UserId,
+                fromDate,
+                toDate,
+                string.IsNullOrWhiteSpace(gameNameFilter) ? null : gameNameFilter
+            );
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading session history");
+            sessions = Enumerable.Empty<SessionHistoryItem>();
+            StateHasChanged();
+        }
+    }
+
+    private async Task RateGame(Guid boardGameId, Guid sessionId, int rating)
+    {
+        if (UserContext == null || string.IsNullOrWhiteSpace(UserContext.UserId))
+            return;
+
+        try
+        {
+            await GameRatingService.SaveRatingAsync(UserContext.UserId, boardGameId, sessionId, rating);
+            
+            // Reload sessions to update ratings
+            await LoadSessionsAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving rating for game {BoardGameId} in session {SessionId}", boardGameId, sessionId);
+        }
+    }
+
+    private void HoverRating(Guid boardGameId, Guid sessionId, int rating)
+    {
+        hoveredGameId = $"{boardGameId}_{sessionId}";
+        hoveredRating = rating;
+        StateHasChanged();
+    }
+
+    private void ClearHover(Guid boardGameId, Guid sessionId)
+    {
+        hoveredGameId = null;
+        hoveredRating = null;
+        StateHasChanged();
+    }
+
+    private void ClearFilters()
+    {
+        fromDate = null;
+        toDate = null;
+        gameNameFilter = string.Empty;
+        _ = LoadSessionsAsync();
+    }
+}
+

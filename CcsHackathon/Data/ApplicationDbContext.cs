@@ -17,6 +17,7 @@ public class ApplicationDbContext : DbContext
         public DbSet<BoardGameFaqCache> BoardGameFaqCaches { get; set; }
         public DbSet<BoardGameConversation> BoardGameConversations { get; set; }
         public DbSet<BoardGameConversationMessage> BoardGameConversationMessages { get; set; }
+        public DbSet<GameRating> GameRatings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -172,6 +173,36 @@ public class ApplicationDbContext : DbContext
                 .WithMany(c => c.Messages)
                 .HasForeignKey(e => e.ConversationId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure GameRating entity
+        modelBuilder.Entity<GameRating>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired();
+            entity.Property(e => e.BoardGameId).IsRequired();
+            entity.Property(e => e.SessionId).IsRequired();
+            entity.Property(e => e.Rating).IsRequired();
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.UpdatedAt).IsRequired();
+            
+            // Validate rating range
+            entity.HasCheckConstraint("CK_GameRating_Rating", "[Rating] >= 0 AND [Rating] <= 5");
+            
+            // Configure many-to-one relationship: GameRating -> BoardGame
+            entity.HasOne(e => e.BoardGame)
+                .WithMany()
+                .HasForeignKey(e => e.BoardGameId)
+                .OnDelete(DeleteBehavior.Restrict);
+            
+            // Configure many-to-one relationship: GameRating -> Session
+            entity.HasOne(e => e.Session)
+                .WithMany()
+                .HasForeignKey(e => e.SessionId)
+                .OnDelete(DeleteBehavior.Restrict);
+            
+            // Unique constraint: one rating per user per game per session
+            entity.HasIndex(e => new { e.UserId, e.BoardGameId, e.SessionId }).IsUnique();
         });
     }
 }
