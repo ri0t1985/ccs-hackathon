@@ -61,9 +61,7 @@
                 
                 @if (!string.IsNullOrWhiteSpace(SearchTerm))
                 {
-                    @{
-                        var resultsList = SearchResults.ToList();
-                    }
+                    var resultsList = SearchResults.ToList();
                     @for (int i = 0; i < resultsList.Count; i++)
                     {
                         var game = resultsList[i];
