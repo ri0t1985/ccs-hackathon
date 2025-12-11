@@ -50,6 +50,7 @@ public class BoardGameOverviewService : IBoardGameOverviewService
                 Summary = gr.BoardGameCache?.Summary,
                 Complexity = gr.BoardGameCache?.Complexity,
                 TimeToSetupMinutes = gr.BoardGameCache?.TimeToSetupMinutes,
+                AveragePlaytimeMinutes = gr.BoardGame.AveragePlaytimeMinutes,
                 HasAiData = gr.BoardGameCache?.HasAiData ?? false,
                 LastUpdatedAt = gr.BoardGameCache?.LastUpdatedAt ?? gr.Registration.CreatedAt
             })

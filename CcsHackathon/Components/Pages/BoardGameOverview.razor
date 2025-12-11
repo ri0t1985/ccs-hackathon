@@ -85,6 +85,7 @@
                             </button>
                         </th>
                         <th>Setup Time</th>
+                        <th>Average Playtime</th>
                         <th>AI Data</th>
                         <th>Actions</th>
                     </tr>
@@ -108,6 +109,16 @@
                                 @if (game.TimeToSetupMinutes.HasValue)
                                 {
                                     <text>@game.TimeToSetupMinutes.Value min</text>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (game.AveragePlaytimeMinutes.HasValue)
+                                {
+                                    <text>@game.AveragePlaytimeMinutes.Value min</text>
                                 }
                                 else
                                 {

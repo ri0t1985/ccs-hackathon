@@ -14,6 +14,7 @@ public record BoardGameOverviewItem
     public string? Summary { get; init; }
     public decimal? Complexity { get; init; }
     public int? TimeToSetupMinutes { get; init; }
+    public int? AveragePlaytimeMinutes { get; init; }
     public bool HasAiData { get; init; }
     public DateTime LastUpdatedAt { get; init; }
 }

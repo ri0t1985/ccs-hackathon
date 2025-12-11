@@ -48,6 +48,7 @@ public class BoardGameAiService : IBoardGameAiService
 {{
   ""complexity"": <a decimal number from 1.0 to 5.0 representing game complexity, where 1.0 is very simple and 5.0 is very complex>,
   ""timeToSetupMinutes"": <an integer representing the estimated time in minutes to set up the game>,
+  ""averagePlaytimeMinutes"": <an integer representing the average play time in minutes for a typical game session>,
   ""summary"": ""<a brief 2-3 sentence summary of the game, its mechanics, and what makes it interesting>""
 }}
 
@@ -110,8 +111,14 @@ Only return valid JSON, no additional text or markdown formatting.";
                 aiData.TimeToSetupMinutes = 0;
             }
 
-            _logger.LogInformation("Successfully generated AI data for game: {GameName}. Complexity: {Complexity}, Setup Time: {Time}min", 
-                gameName, aiData.Complexity, aiData.TimeToSetupMinutes);
+            if (aiData.AveragePlaytimeMinutes < 0)
+            {
+                _logger.LogWarning("Invalid average playtime {Time} for game {GameName}. Setting to 0.", aiData.AveragePlaytimeMinutes, gameName);
+                aiData.AveragePlaytimeMinutes = 0;
+            }
+
+            _logger.LogInformation("Successfully generated AI data for game: {GameName}. Complexity: {Complexity}, Setup Time: {SetupTime}min, Playtime: {Playtime}min", 
+                gameName, aiData.Complexity, aiData.TimeToSetupMinutes, aiData.AveragePlaytimeMinutes);
 
             return aiData;
         }

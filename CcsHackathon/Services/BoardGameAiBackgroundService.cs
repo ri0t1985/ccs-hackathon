@@ -149,6 +149,11 @@ public class BoardGameAiBackgroundService : BackgroundService
                 boardGame.SetupComplexity = aiData.Complexity;
                 boardGame.Score = aiData.Complexity; // Using Complexity as Score for now
                 boardGame.Description = aiData.Summary;
+                // Only update AveragePlaytimeMinutes if it doesn't already exist
+                if (!boardGame.AveragePlaytimeMinutes.HasValue)
+                {
+                    boardGame.AveragePlaytimeMinutes = aiData.AveragePlaytimeMinutes;
+                }
                 boardGame.LastUpdatedAt = DateTime.UtcNow;
             }
 

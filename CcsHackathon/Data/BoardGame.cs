@@ -7,6 +7,7 @@ public class BoardGame
     public string? Description { get; set; }
     public decimal? SetupComplexity { get; set; } // Using decimal to match Complexity in BoardGameCache
     public decimal? Score { get; set; } // AI score/rating
+    public int? AveragePlaytimeMinutes { get; set; } // Average play time in minutes
     public DateTime CreatedAt { get; set; }
     public DateTime? LastUpdatedAt { get; set; }
     
