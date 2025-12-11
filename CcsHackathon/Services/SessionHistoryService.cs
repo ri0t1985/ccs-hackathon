@@ -83,6 +83,22 @@ public class SessionHistoryService : ISessionHistoryService
             allRatings[sessionId] = ratings;
         }
 
+        // Get all board game IDs to calculate average ratings
+        var allBoardGameIds = gamesBySession.Values
+            .SelectMany(g => g.Select(x => x.BoardGameId))
+            .Distinct()
+            .ToList();
+
+        // Get average ratings for all games
+        var averageRatings = await _ratingService.GetAverageRatingsAsync(allBoardGameIds);
+
+        // Get rating counts for all games
+        var ratingCounts = await _dbContext.GameRatings
+            .Where(r => allBoardGameIds.Contains(r.BoardGameId))
+            .GroupBy(r => r.BoardGameId)
+            .Select(g => new { BoardGameId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.BoardGameId, x => x.Count);
+
         // Build result
         var result = new List<SessionHistoryItem>();
         foreach (var session in sessions)
@@ -95,7 +111,9 @@ public class SessionHistoryService : ISessionHistoryService
                         GameName = g.GameName,
                         UserRating = allRatings.ContainsKey(session.Id) && allRatings[session.Id].ContainsKey(g.BoardGameId)
                             ? allRatings[session.Id][g.BoardGameId]
-                            : null
+                            : null,
+                        AverageRating = averageRatings.ContainsKey(g.BoardGameId) ? averageRatings[g.BoardGameId] : null,
+                        RatingCount = ratingCounts.GetValueOrDefault(g.BoardGameId, 0)
                     })
                     .OrderBy(g => g.GameName)
                     .ToList()

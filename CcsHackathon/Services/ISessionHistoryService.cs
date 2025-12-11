@@ -19,5 +19,7 @@ public class GameHistoryItem
     public Guid BoardGameId { get; set; }
     public string GameName { get; set; } = string.Empty;
     public int? UserRating { get; set; } // User's rating (0-5) or null if not rated
+    public decimal? AverageRating { get; set; } // Average rating across all users or null if no ratings
+    public int RatingCount { get; set; } // Number of ratings for this game
 }
 
