@@ -1,0 +1,302 @@
+@using CcsHackathon.Services
+@using CcsHackathon.Data
+@implements IDisposable
+@inject IBoardGameService BoardGameService
+@inject ILogger<SearchableBoardGameSelector> Logger
+
+<div class="searchable-select-container position-relative">
+    <div class="input-group">
+        <input type="text" 
+               class="form-control @(IsInvalid ? "is-invalid" : "")" 
+               placeholder="@Placeholder"
+               value="@SearchTerm"
+               @oninput="HandleInput"
+               @onkeydown="HandleKeyDown"
+               @onfocus="HandleFocus"
+               @onblur="HandleBlur" />
+        @if (!string.IsNullOrWhiteSpace(SelectedGameName))
+        {
+            <button type="button" 
+                    class="btn btn-outline-secondary" 
+                    @onclick="ClearSelection"
+                    title="Clear selection">
+                ✕
+            </button>
+        }
+    </div>
+    
+    @if (ShowDropdown && (SearchResults.Any() || ShowCreateOption))
+    {
+        <div class="dropdown-menu show position-absolute w-100" style="max-height: 300px; overflow-y: auto; z-index: 1000;">
+            @{
+                var resultsList = SearchResults.ToList();
+            }
+            @for (int i = 0; i < resultsList.Count; i++)
+            {
+                var game = resultsList[i];
+                var gameIndex = i;
+                <button type="button" 
+                        class="dropdown-item @(SelectedIndex == gameIndex ? "active" : "")"
+                        @onclick="() => SelectGame(game)"
+                        @onmousedown:preventDefault="true"
+                        @onmouseenter="() => SetHoveredIndex(gameIndex)">
+                    @game.Name
+                </button>
+            }
+            @if (ShowCreateOption && !string.IsNullOrWhiteSpace(SearchTerm))
+            {
+                var createIndex = resultsList.Count;
+                <div class="dropdown-divider"></div>
+                <button type="button" 
+                        class="dropdown-item text-primary fw-bold @(SelectedIndex == createIndex ? "active" : "")"
+                        @onclick="CreateNewGame"
+                        @onmousedown:preventDefault="true"
+                        @onmouseenter="() => SetHoveredIndex(createIndex)">
+                    + Add new game: "@SearchTerm"
+                </button>
+            }
+        </div>
+    }
+    
+    @if (IsLoading)
+    {
+        <div class="position-absolute end-0 top-50 translate-middle-y me-2">
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        </div>
+    }
+    
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="invalid-feedback d-block">@ErrorMessage</div>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid? SelectedGameId { get; set; }
+    [Parameter] public EventCallback<Guid?> SelectedGameIdChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Search board games...";
+    [Parameter] public bool IsInvalid { get; set; }
+    
+    private string SearchTerm { get; set; } = string.Empty;
+    private string SelectedGameName { get; set; } = string.Empty;
+    private IEnumerable<BoardGame> SearchResults { get; set; } = Enumerable.Empty<BoardGame>();
+    private bool ShowDropdown { get; set; } = false;
+    private bool ShowCreateOption { get; set; } = false;
+    private bool IsLoading { get; set; } = false;
+    private string ErrorMessage { get; set; } = string.Empty;
+    private int SelectedIndex { get; set; } = -1;
+    private System.Threading.Timer? _debounceTimer;
+    private const int DebounceDelayMs = 300;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (SelectedGameId.HasValue)
+        {
+            var game = await BoardGameService.GetBoardGameByIdAsync(SelectedGameId.Value);
+            if (game != null)
+            {
+                SelectedGameName = game.Name;
+                SearchTerm = game.Name;
+            }
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (SelectedGameId.HasValue)
+        {
+            var game = await BoardGameService.GetBoardGameByIdAsync(SelectedGameId.Value);
+            if (game != null && game.Name != SelectedGameName)
+            {
+                SelectedGameName = game.Name;
+                SearchTerm = game.Name;
+            }
+        }
+        else if (!string.IsNullOrEmpty(SelectedGameName))
+        {
+            SelectedGameName = string.Empty;
+            SearchTerm = string.Empty;
+        }
+    }
+
+    private async void HandleInput(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString() ?? string.Empty;
+        SearchTerm = value;
+        SelectedGameId = null;
+        SelectedGameName = string.Empty;
+        ErrorMessage = string.Empty;
+        
+        // Debounce the search
+        _debounceTimer?.Dispose();
+        _debounceTimer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                await PerformSearch();
+                StateHasChanged();
+            });
+        }, null, DebounceDelayMs, Timeout.Infinite);
+    }
+
+    private async Task PerformSearch()
+    {
+        if (string.IsNullOrWhiteSpace(SearchTerm))
+        {
+            SearchResults = Enumerable.Empty<BoardGame>();
+            ShowCreateOption = false;
+            ShowDropdown = false;
+            IsLoading = false;
+            return;
+        }
+
+        IsLoading = true;
+        ShowDropdown = true;
+        
+        try
+        {
+            SearchResults = await BoardGameService.SearchBoardGamesAsync(SearchTerm);
+            
+            // Check if exact match exists (case-insensitive)
+            var exactMatch = SearchResults.Any(g => 
+                g.Name.Equals(SearchTerm, StringComparison.OrdinalIgnoreCase));
+            
+            // Show create option if no exact match and search term is not empty
+            ShowCreateOption = !exactMatch && !string.IsNullOrWhiteSpace(SearchTerm.Trim());
+            
+            SelectedIndex = -1;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error searching board games");
+            ErrorMessage = "An error occurred while searching. Please try again.";
+            SearchResults = Enumerable.Empty<BoardGame>();
+            ShowCreateOption = false;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task SelectGame(BoardGame game)
+    {
+        SelectedGameId = game.Id;
+        SelectedGameName = game.Name;
+        SearchTerm = game.Name;
+        ShowDropdown = false;
+        SelectedIndex = -1;
+        
+        await SelectedGameIdChanged.InvokeAsync(SelectedGameId);
+    }
+
+    private async Task CreateNewGame()
+    {
+        if (string.IsNullOrWhiteSpace(SearchTerm?.Trim()))
+        {
+            ErrorMessage = "Please enter a game name.";
+            return;
+        }
+
+        IsLoading = true;
+        ErrorMessage = string.Empty;
+        
+        try
+        {
+            // Check if game already exists
+            var exists = await BoardGameService.BoardGameExistsAsync(SearchTerm);
+            if (exists)
+            {
+                ErrorMessage = "This game already exists. Please select it from the list.";
+                await PerformSearch();
+                return;
+            }
+
+            var newGame = await BoardGameService.CreateBoardGameAsync(SearchTerm);
+            await SelectGame(newGame);
+        }
+        catch (InvalidOperationException ex)
+        {
+            ErrorMessage = ex.Message;
+            await PerformSearch();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error creating board game");
+            ErrorMessage = "An error occurred while creating the game. Please try again.";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void ClearSelection()
+    {
+        SelectedGameId = null;
+        SelectedGameName = string.Empty;
+        SearchTerm = string.Empty;
+        SearchResults = Enumerable.Empty<BoardGame>();
+        ShowDropdown = false;
+        SelectedGameIdChanged.InvokeAsync(null);
+    }
+
+    private void HandleFocus()
+    {
+        if (!string.IsNullOrWhiteSpace(SearchTerm))
+        {
+            ShowDropdown = true;
+        }
+    }
+
+    private async void HandleBlur()
+    {
+        // Delay to allow click events to fire
+        await Task.Delay(200);
+        ShowDropdown = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (!ShowDropdown) return;
+
+        var resultsList = SearchResults.ToList();
+        var totalItems = resultsList.Count + (ShowCreateOption ? 1 : 0);
+
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                SelectedIndex = (SelectedIndex + 1) % totalItems;
+                break;
+            case "ArrowUp":
+                SelectedIndex = SelectedIndex <= 0 ? totalItems - 1 : SelectedIndex - 1;
+                break;
+            case "Enter":
+                if (SelectedIndex >= 0 && SelectedIndex < resultsList.Count)
+                {
+                    await SelectGame(resultsList[SelectedIndex]);
+                }
+                else if (SelectedIndex == resultsList.Count && ShowCreateOption)
+                {
+                    await CreateNewGame();
+                }
+                break;
+            case "Escape":
+                ShowDropdown = false;
+                SelectedIndex = -1;
+                break;
+        }
+    }
+
+    private void SetHoveredIndex(int index)
+    {
+        SelectedIndex = index;
+    }
+
+    public void Dispose()
+    {
+        _debounceTimer?.Dispose();
+    }
+}
+
