@@ -64,7 +64,7 @@ public class GameRecommendationService : IGameRecommendationService
                     AverageRating = averageRatings.GetValueOrDefault(g.Id)
                 })
                 .OrderByDescending(x => x.UserRating)
-                .ThenByDescending(x => x.AverageRating ?? 0m)
+                .ThenByDescending(x => x.AverageRating.HasValue ? x.AverageRating.Value : 0m)
                 .Take(3)
                 .Select(x => new RecommendedGame
                 {
