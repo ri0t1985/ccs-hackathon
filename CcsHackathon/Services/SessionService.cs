@@ -63,6 +63,65 @@ public class SessionService : ISessionService
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<Session>> GetHistoricSessionsAsync()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        return await _dbContext.Sessions
+            .Where(s => !s.IsCancelled && s.Date < today)
+            .OrderByDescending(s => s.Date)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<SessionWithAttendeeCount>> GetUpcomingSessionsWithAttendeeCountAsync()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        
+        var sessions = await _dbContext.Sessions
+            .Where(s => !s.IsCancelled && s.Date >= today)
+            .OrderBy(s => s.Date)
+            .ToListAsync();
+
+        var sessionIds = sessions.Select(s => s.Id).ToList();
+        
+        // Efficiently count unique users per session in a single query
+        var attendeeCounts = await _dbContext.Registrations
+            .Where(r => r.SessionId.HasValue && sessionIds.Contains(r.SessionId.Value))
+            .GroupBy(r => r.SessionId!.Value)
+            .Select(g => new { SessionId = g.Key, Count = g.Select(r => r.UserId).Distinct().Count() })
+            .ToDictionaryAsync(x => x.SessionId, x => x.Count);
+
+        return sessions.Select(s => new SessionWithAttendeeCount
+        {
+            Session = s,
+            AttendeeCount = attendeeCounts.GetValueOrDefault(s.Id, 0)
+        });
+    }
+
+    public async Task<IEnumerable<SessionWithAttendeeCount>> GetHistoricSessionsWithAttendeeCountAsync()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        
+        var sessions = await _dbContext.Sessions
+            .Where(s => !s.IsCancelled && s.Date < today)
+            .OrderByDescending(s => s.Date)
+            .ToListAsync();
+
+        var sessionIds = sessions.Select(s => s.Id).ToList();
+        
+        // Efficiently count unique users per session in a single query
+        var attendeeCounts = await _dbContext.Registrations
+            .Where(r => r.SessionId.HasValue && sessionIds.Contains(r.SessionId.Value))
+            .GroupBy(r => r.SessionId!.Value)
+            .Select(g => new { SessionId = g.Key, Count = g.Select(r => r.UserId).Distinct().Count() })
+            .ToDictionaryAsync(x => x.SessionId, x => x.Count);
+
+        return sessions.Select(s => new SessionWithAttendeeCount
+        {
+            Session = s,
+            AttendeeCount = attendeeCounts.GetValueOrDefault(s.Id, 0)
+        });
+    }
+
     public async Task<Session?> GetSessionByIdAsync(Guid sessionId)
     {
         return await _dbContext.Sessions
